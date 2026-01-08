@@ -93,10 +93,9 @@ class Game {
         return this.scenario.characters.find(c => c.id === id);
     }
 
-    renderCharacterList() {
+     renderCharacterList() {
         const list = document.getElementById('character-list');
         list.innerHTML = '';
-
         this.scenario.characters.forEach(char => {
             const div = document.createElement('div');
             div.className = 'character-card';
@@ -151,20 +150,32 @@ class Game {
 
         input.value = '';
 
+        // Add User Message
         this.appendMessage('user', text);
 
+        // Prepare System Prompt
         const char = this.getCharacter(this.currentCharacterId);
         const systemPrompt = this.constructSystemPrompt(char);
 
+        // Call AI
+        // Simplify history for API context (optional: for now just sending last turn or implementing full history later)
+        // For context-aware AI, we should send history.
+        // But sendToAI interface is (system, user). 
+        // We might need to adjust sendToAI to accept history or handle it here by concatenating.
+        // Let's concat history for now to fit the simple interface.
         const history = this.state.history[this.currentCharacterId] || [];
+        // Take last few messages to keep context window manageable if needed, or all.
         const contextStr = history.map(h => `${h.role === 'user' ? 'プレイヤー' : char.name}: ${h.text}`).join("\n");
 
+        // Actually, for better roleplay, we pass the raw user prompt but the 'System' prompt contains context?
+        // Let's try combining:
         const combinedUserPrompt = `${contextStr}\nプレイヤー: ${text}\n(この発言に対する返答を生成してください)`;
 
         const responseText = await sendToAI(systemPrompt, combinedUserPrompt);
 
         this.appendMessage('model', responseText);
 
+        // Check for evidence unlock conditions
         this.checkEvidenceUnlock(text, responseText);
     }
 
@@ -178,30 +189,34 @@ class Game {
     }
 
     constructSystemPrompt(char) {
-        const knownEvidences = this.state.evidences.map(eid => {
-            const e = this.scenario.evidences.find(ev => ev.id === eid);
+        // Collect known evidences
+        const knownEvidences = (this.state.evidences || []).map(eid => {
+            const e = (this.scenario.evidences || []).find(ev => ev.id === eid);
             return e ? `${e.name}: ${e.description}` : null;
         }).filter(Boolean).join("\n");
 
-        return `
+        const personality = Array.isArray(char.personality) ? char.personality.join("、") : char.personality;
+        const knowledge = (char.knowledge || char.background || []).join?.("\n") || "なし";
+        const secrets = (char.secrets || char.hidden_story || []).join?.("\n") || "なし";
+        const lies = (char.lies || []).join?.("\n") || "なし";
 
-        
+        return `
 あなたはミステリーゲームの登場人物「${char.name}」として振る舞ってください。
 以下の設定を厳守すること。
 
 # キャラクター設定
-性格: ${char.personality}
+性格: ${personality}
 役割: ${char.role}
 口調: ${char.talk_style}
 
 # 知っていること
-${char.knowledge.join("\n")}
+${knowledge}
 
 # 秘密
-${char.secrets.join("\n")}
+${secrets}
 
 # 嘘
-${char.lies.join("\n")}
+${lies}
 (証拠を突きつけられるまでは嘘を突き通してください)
 
 # 現在判明している証拠
@@ -295,6 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') game.sendMessage();
     });
 });
+
 
 
 
