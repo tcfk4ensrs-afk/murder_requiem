@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ようこそ</title>
+  <style>
+    :root {
+      --bg-color: #1a1a1a;
+      --text-color: #e0e0e0;
+      --accent-color: #8ab4f8;
+      --card-bg: #2d2d2d;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    #landing-container {
+      text-align: center;
+      padding: 30px 20px;
+      max-width: 800px;
+    }
+
+    header {
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 1rem;
+      color: #aaa;
+    }
+
+    #gallery {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 30px 0;
+    }
+
+    #gallery img {
+      width: 150px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 2px solid var(--card-bg);
+      transition: transform 0.3s;
+    }
+
+    #gallery img:hover {
+      transform: scale(1.05);
+      border-color: var(--accent-color);
+    }
+
+    .enter-button {
+      background-color: var(--accent-color);
+      color: #000;
+      padding: 12px 24px;
+      border-radius: 25px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background-color 0.3s;
+      display: inline-block;
+    }
+
+    .enter-button:hover {
+      background-color: #6fa3f2;
+    }
+  </style>
+</head>
+<body>
+  <div id="landing-container">
+    <header>
+      <h1>ようこそ、探偵事務所へ</h1>
+      <p>事件の真相を暴く準備はできていますか？</p>
+    </header>
+
+    <section id="gallery">
+      <img src="img1.jpg" alt="シーン1" />
+      <img src="img2.jpg" alt="シーン2" />
+      <img src="img3.jpg" alt="シーン3" />
+    </section>
+
+    <a href="index.html" class="enter-button">調査を開始する</a>
+  </div>
+</body>
+</html>
