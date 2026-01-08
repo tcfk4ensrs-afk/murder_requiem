@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Murder Mystery AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Main Menu Screen -->
+        <div id="main-menu">
+            <header>
+                <h1 id="case-title">Loading...</h1>
+                <p id="case-outline">---</p>
+            </header>
+
+            <div class="content">
+                <h2 class="section-title">容疑者リスト</h2>
+                <div id="character-list">
+                    <!-- JS Injected -->
+                </div>
+
+                <h2 class="section-title">所持証拠・情報</h2>
+                <div id="evidence-list">
+                    <p style="color:#666; font-size:0.9rem; padding:10px;">(まだ証拠はありません)</p>
+                </div>
+            </div>
+            
+            <div style="padding: 20px; text-align: center; color: #666; font-size: 0.8rem;">
+                Config Warning: Set API Key in config.js
+            </div>
+        </div>
+
+        <!-- Interrogation Room Screen -->
+        <div id="interrogation-room">
+            <header id="room-header">
+                <button id="back-btn">←</button>
+                <span id="target-name">Unknown</span>
+                <div style="width: 40px;"></div> <!-- Spacer -->
+            </header>
+            
+            <div id="chat-log">
+                <!-- Chat messages -->
+            </div>
+            
+            <div id="input-area">
+                <input type="text" id="chat-input" placeholder="質問を入力...">
+                <button id="send-btn">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="game.js"></script>
+</body>
+</html>

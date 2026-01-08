@@ -1,0 +1,17 @@
+{
+  "case": {
+    "title": "レクイエムをもう一度",
+
+    "outline": "遺作「交響曲 明日(あす)へのレクイエム」が世界的に有名になった作曲家、響 行人(ひびき ゆきと)。\nその行人の死から12年がたとうとしていた。\n\n行人の子供たちは都会に住んでいるが、十三回忌の法要のために響邸へと帰って来る。\n久々に会うのだから話しながら行こうと、周囲を緑に囲まれた駅で待ち合わせることになった。\nこうして兄弟姉妹たちが一堂に集まるのは行人の七回忌以来になる。\n\n長男の晴二(せいじ)が運転するミニバンへ、長女の一海(かずみ)、次男の蓮三(れんぞう)、次女の四葉(よつば)、三男の渓五(けいご)が乗り込む。\n母親ユメの住む小高い丘の屋敷を目指して車は走り出す。\n\nユメは『行人の曲の権利を手放したい』とみんなに伝えていた。\nその真意は何なのだろうか……。",
+
+    "truth": "犯人は蓮三。",
+    "culprit": "butler"
+  },
+  "characters": [
+    "scenarios/characters/kazumi.json",
+    "scenarios/characters/seiji.json",
+    "scenarios/characters/yotuha.json",
+    "scenarios/characters/renzo.json",
+    "scenarios/characters/keigo.json"
+  ]
+}
