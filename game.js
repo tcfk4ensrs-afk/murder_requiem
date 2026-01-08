@@ -9,31 +9,47 @@ class Game {
             history: {}, // { charId: [{role, text}] }
             flags: {}
         };
-
-        // GitHub Pages とローカルの両方で動く BASE パス
-        this.BASE = window.location.pathname.includes('murder_requiem')
-            ? '/murder_requiem/'
-            : './';
     }
 
     async init() {
-        await this.loadScenario(`${this.BASE}scenarios/case1.json`);
-        this.loadState();
-        this.renderCharacterList();
-        this.updateAttributesUI();
+        try {
+            console.log("Game initialising...");
+            await this.loadScenario('./scenarios/case1.json');
+            this.loadState();
+            this.renderCharacterList();
+            this.updateAttributesUI();
+            console.log("Game initialised successfully.");
+        } catch (e) {
+            console.error("Critical error during init:", e);
+            this.showError("初期化エラー: " + e.message);
+        }
+    }
+
+    showError(msg) {
+        const errLog = document.getElementById('error-log');
+        if (errLog) {
+            errLog.style.display = 'block';
+            errLog.innerText += msg + "\n";
+        }
+        alert(msg);
     }
 
     async loadScenario(path) {
         try {
             const res = await fetch(path);
+            if (!res.ok) {
+                throw new Error(`HTTP Error: ${res.status} ${res.statusText} for ${path}`);
+            }
             this.scenario = await res.json();
 
-            // キャラ JSON の読み込み（BASE 対応）
+            // Allow characters to be file paths (Split JSON support)
             if (this.scenario.characters) {
                 const charPromises = this.scenario.characters.map(async (charOrPath) => {
                     if (typeof charOrPath === 'string') {
-                        const fullPath = `${this.BASE}${charOrPath.replace('./', '')}`;
-                        const charRes = await fetch(fullPath);
+                        const charRes = await fetch(charOrPath);
+                        if (!charRes.ok) {
+                            throw new Error(`Character JSON Error: ${charRes.status} at ${charOrPath}`);
+                        }
                         return await charRes.json();
                     }
                     return charOrPath;
@@ -41,7 +57,6 @@ class Game {
                 this.scenario.characters = await Promise.all(charPromises);
             }
 
-            // タイトル反映
             // Title setting
             document.getElementById('case-title').innerText = this.scenario.case.title;
             document.getElementById('case-outline').innerText = this.scenario.case.outline;
@@ -57,17 +72,20 @@ class Game {
 
     resetGame() {
         if (confirm("本当にリセットしますか？\nこれまでの会話履歴や証拠はすべて失われます。")) {
-            localStorage.clear();
+            localStorage.clear(); // Clear all data
             alert("リセットしました。ページを再読み込みします。");
             location.reload();
         }
     }
 
     loadState() {
+        // ... (existing code, ensure it handles new structure if needed, but strict state loading is fine)
         const saved = localStorage.getItem('mystery_game_state_v1');
         if (saved) {
             this.state = JSON.parse(saved);
         } else {
+            // Initial State
+            // Unlock initial evidences
             if (this.scenario && this.scenario.evidences) {
                 this.scenario.evidences.forEach(ev => {
                     if (ev.unlock_condition === 'start') {
@@ -86,6 +104,7 @@ class Game {
         if (!this.state.evidences.includes(evidenceId)) {
             this.state.evidences.push(evidenceId);
             this.saveState();
+            // TODO: Notify user of new evidence
         }
     }
 
@@ -93,7 +112,11 @@ class Game {
         return this.scenario.characters.find(c => c.id === id);
     }
 
-     renderCharacterList() {
+    renderCharacterList() {
+        if (!this.scenario || !this.scenario.characters) {
+            console.warn("Cannot render character list: scenario or characters missing.");
+            return;
+        }
         const list = document.getElementById('character-list');
         list.innerHTML = '';
         this.scenario.characters.forEach(char => {
@@ -230,6 +253,7 @@ ${knownEvidences}
     }
 
     updateAttributesUI() {
+        if (!this.scenario) return;
         // Evidence list update
         const list = document.getElementById('evidence-list');
         list.innerHTML = '';
@@ -310,8 +334,3 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') game.sendMessage();
     });
 });
-
-
-
-
-
