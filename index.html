@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Murder Mystery AI</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div id="app">
         <!-- Main Menu Screen -->
@@ -26,7 +28,7 @@
                     <p style="color:#666; font-size:0.9rem; padding:10px;">(まだ証拠はありません)</p>
                 </div>
             </div>
-            
+
             <div style="padding: 20px; text-align: center; color: #666; font-size: 0.8rem;">
                 Config Warning: Set API Key in config.js
             </div>
@@ -39,11 +41,11 @@
                 <span id="target-name">Unknown</span>
                 <div style="width: 40px;"></div> <!-- Spacer -->
             </header>
-            
+
             <div id="chat-log">
                 <!-- Chat messages -->
             </div>
-            
+
             <div id="input-area">
                 <input type="text" id="chat-input" placeholder="質問を入力...">
                 <button id="send-btn">➤</button>
@@ -51,9 +53,12 @@
         </div>
 
         <!-- Debug/Error Area -->
-        <div id="error-log" style="display:none; margin:10px; padding:10px; background:#ffebee; border:1px solid #c62828; color:#c62828; font-size:0.8rem; white-space:pre-wrap;"></div>
+        <div id="error-log"
+            style="display:none; margin:10px; padding:10px; background:#ffebee; border:1px solid #c62828; color:#c62828; font-size:0.8rem; white-space:pre-wrap;">
+        </div>
     </div>
 
     <script type="module" src="game.js"></script>
 </body>
+
 </html>
