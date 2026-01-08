@@ -42,12 +42,16 @@ class Game {
             }
 
             // タイトル反映
+            // Title setting
             document.getElementById('case-title').innerText = this.scenario.case.title;
             document.getElementById('case-outline').innerText = this.scenario.case.outline;
-
         } catch (e) {
             console.error("Failed to load scenario", e);
-            alert("シナリオ読み込みエラー詳細: " + e.message);
+            const errorMsg = `シナリオ読み込みエラー: ${e.message}\n${path} が存在するか、パスが正しいか確認してください。`;
+            alert(errorMsg);
+            document.getElementById('case-title').innerText = "Load Error";
+            document.getElementById('case-outline').innerText = errorMsg;
+            document.getElementById('case-outline').style.color = "red";
         }
     }
 
@@ -291,6 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') game.sendMessage();
     });
 });
+
 
 
 
