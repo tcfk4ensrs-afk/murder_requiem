@@ -51,18 +51,24 @@
       margin: 30px 0;
     }
 
+    #gallery a {
+      display: inline-block;
+      border: 2px solid var(--card-bg);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: transform 0.3s, border-color 0.3s;
+    }
+
+    #gallery a:hover {
+      transform: scale(1.05);
+      border-color: var(--accent-color);
+    }
+
     #gallery img {
       width: 150px;
       height: 100px;
       object-fit: cover;
-      border-radius: 8px;
-      border: 2px solid var(--card-bg);
-      transition: transform 0.3s;
-    }
-
-    #gallery img:hover {
-      transform: scale(1.05);
-      border-color: var(--accent-color);
+      display: block;
     }
 
     .enter-button {
@@ -89,9 +95,16 @@
     </header>
 
     <section id="gallery">
-      <img src="img1.jpg" alt="シーン1" />
-      <img src="img2.jpg" alt="シーン2" />
-      <img src="img3.jpg" alt="シーン3" />
+      <!-- PDFリンク付きサムネイル -->
+      <a href="image/1.pdf" target="_blank">
+        <img src="image/thumb1.jpg" alt="PDF 1のサムネイル" />
+      </a>
+      <a href="image/2.pdf" target="_blank">
+        <img src="image/thumb2.jpg" alt="PDF 2のサムネイル" />
+      </a>
+      <a href="image/5.pdf" target="_blank">
+        <img src="image/thumb5.jpg" alt="PDF 5のサムネイル" />
+      </a>
     </section>
 
     <a href="index.html" class="enter-button">調査を開始する</a>
