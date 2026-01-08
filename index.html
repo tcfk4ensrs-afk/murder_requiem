@@ -8,6 +8,7 @@
 </head>
 <body>
     <div id="app">
+
         <!-- Main Menu Screen -->
         <div id="main-menu">
             <header>
@@ -33,7 +34,8 @@
         </div>
 
         <!-- Interrogation Room Screen -->
-        <div id="interrogation-room">
+        <!-- ★ ここに display:none を追加するのが最重要修正点！ -->
+        <div id="interrogation-room" style="display:none;">
             <header id="room-header">
                 <button id="back-btn">←</button>
                 <span id="target-name">Unknown</span>
@@ -49,6 +51,7 @@
                 <button id="send-btn">➤</button>
             </div>
         </div>
+
     </div>
 
     <script type="module" src="game.js"></script>
