@@ -8,11 +8,14 @@
     "culprit": "renzo"
   },
   "characters": [
-    "scenarios/characters/kazumi.json",
-    "scenarios/characters/seiji.json",
-    "scenarios/characters/yotuha.json",
-    "scenarios/characters/renzo.json",
-    "scenarios/characters/keigo.json"
+  "/murder_requiem/scenarios/characters/kazumi.json",
+  "/murder_requiem/scenarios/characters/seiji.json",
+  "/murder_requiem/scenarios/characters/yotuha.json",
+  "/murder_requiem/scenarios/characters/renzo.json",
+  "/murder_requiem/scenarios/characters/keigo.json"
+]
+
   ]
 
 }
+
