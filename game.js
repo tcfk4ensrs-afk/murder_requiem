@@ -14,6 +14,8 @@ class Game {
     async init() {
         try {
             console.log("Game initialising...");
+            // Use strictly relative paths starting with './'
+            // This works both locally and on GitHub Pages (e.g. /repo-name/)
             await this.loadScenario('./scenarios/case1.json');
             this.loadState();
             this.renderCharacterList();
@@ -38,17 +40,26 @@ class Game {
         try {
             const res = await fetch(path);
             if (!res.ok) {
-                throw new Error(`HTTP Error: ${res.status} ${res.statusText} for ${path}`);
+                throw new Error(`ファイルが見つかりません (${res.status}): ${path}\nGitHubにフォルダとファイルがアップロードされているか確認してください。`);
             }
-            this.scenario = await res.json();
 
-            // Allow characters to be file paths (Split JSON support)
+            const text = await res.text();
+            try {
+                this.scenario = JSON.parse(text);
+            } catch (jsonErr) {
+                console.error("JSON parse error. Received text:", text.substring(0, 100));
+                throw new Error(`JSON形式が正しくありません。ファイルが壊れているか、HTMLが返されています。\nパス: ${path}`);
+            }
+
+            // キャラ JSON の読み込み
             if (this.scenario.characters) {
                 const charPromises = this.scenario.characters.map(async (charOrPath) => {
                     if (typeof charOrPath === 'string') {
-                        const charRes = await fetch(charOrPath);
+                        // Ensure relative path starting from root (index.html's level)
+                        const fullPath = charOrPath.startsWith('.') ? charOrPath : `./${charOrPath}`;
+                        const charRes = await fetch(fullPath);
                         if (!charRes.ok) {
-                            throw new Error(`Character JSON Error: ${charRes.status} at ${charOrPath}`);
+                            throw new Error(`キャラクターファイルが見つかりません (${charRes.status}): ${fullPath}`);
                         }
                         return await charRes.json();
                     }
@@ -57,35 +68,34 @@ class Game {
                 this.scenario.characters = await Promise.all(charPromises);
             }
 
-            // Title setting
-            document.getElementById('case-title').innerText = this.scenario.case.title;
-            document.getElementById('case-outline').innerText = this.scenario.case.outline;
+            // タイトル反映
+            if (this.scenario.case) {
+                document.getElementById('case-title').innerText = this.scenario.case.title || "No Title";
+                document.getElementById('case-outline').innerText = this.scenario.case.outline || "No Outline";
+            }
         } catch (e) {
             console.error("Failed to load scenario", e);
-            const errorMsg = `シナリオ読み込みエラー: ${e.message}\n${path} が存在するか、パスが正しいか確認してください。`;
-            alert(errorMsg);
+            const errorMsg = e.message;
             document.getElementById('case-title').innerText = "Load Error";
             document.getElementById('case-outline').innerText = errorMsg;
             document.getElementById('case-outline').style.color = "red";
+            throw e; // Re-throw to be caught by init()
         }
     }
 
     resetGame() {
         if (confirm("本当にリセットしますか？\nこれまでの会話履歴や証拠はすべて失われます。")) {
-            localStorage.clear(); // Clear all data
+            localStorage.clear();
             alert("リセットしました。ページを再読み込みします。");
             location.reload();
         }
     }
 
     loadState() {
-        // ... (existing code, ensure it handles new structure if needed, but strict state loading is fine)
         const saved = localStorage.getItem('mystery_game_state_v1');
         if (saved) {
             this.state = JSON.parse(saved);
         } else {
-            // Initial State
-            // Unlock initial evidences
             if (this.scenario && this.scenario.evidences) {
                 this.scenario.evidences.forEach(ev => {
                     if (ev.unlock_condition === 'start') {
@@ -104,7 +114,6 @@ class Game {
         if (!this.state.evidences.includes(evidenceId)) {
             this.state.evidences.push(evidenceId);
             this.saveState();
-            // TODO: Notify user of new evidence
         }
     }
 
@@ -113,10 +122,7 @@ class Game {
     }
 
     renderCharacterList() {
-        if (!this.scenario || !this.scenario.characters) {
-            console.warn("Cannot render character list: scenario or characters missing.");
-            return;
-        }
+        if (!this.scenario || !this.scenario.characters) return;
         const list = document.getElementById('character-list');
         list.innerHTML = '';
         this.scenario.characters.forEach(char => {
@@ -181,17 +187,9 @@ class Game {
         const systemPrompt = this.constructSystemPrompt(char);
 
         // Call AI
-        // Simplify history for API context (optional: for now just sending last turn or implementing full history later)
-        // For context-aware AI, we should send history.
-        // But sendToAI interface is (system, user). 
-        // We might need to adjust sendToAI to accept history or handle it here by concatenating.
-        // Let's concat history for now to fit the simple interface.
         const history = this.state.history[this.currentCharacterId] || [];
-        // Take last few messages to keep context window manageable if needed, or all.
         const contextStr = history.map(h => `${h.role === 'user' ? 'プレイヤー' : char.name}: ${h.text}`).join("\n");
 
-        // Actually, for better roleplay, we pass the raw user prompt but the 'System' prompt contains context?
-        // Let's try combining:
         const combinedUserPrompt = `${contextStr}\nプレイヤー: ${text}\n(この発言に対する返答を生成してください)`;
 
         const responseText = await sendToAI(systemPrompt, combinedUserPrompt);
@@ -253,8 +251,7 @@ ${knownEvidences}
     }
 
     updateAttributesUI() {
-        if (!this.scenario) return;
-        // Evidence list update
+        if (!this.scenario || !this.scenario.evidences) return;
         const list = document.getElementById('evidence-list');
         list.innerHTML = '';
         if (this.state.evidences.length === 0) {
@@ -280,7 +277,6 @@ ${knownEvidences}
         this.scenario.evidences.forEach(ev => {
             if (this.state.evidences.includes(ev.id)) return;
 
-            // Logic: talk_butler_lies -> unlock if talking to butler and keyword '鍵' (Key) appears
             if (ev.unlock_condition === 'talk_butler_lies') {
                 if (this.currentCharacterId === 'butler' && (userText.includes('鍵') || aiText.includes('鍵'))) {
                     this.addEvidence(ev.id);
@@ -314,14 +310,12 @@ window.game = game; // For debug
 document.addEventListener('DOMContentLoaded', () => {
     game.init();
 
-    // Add Accuse Button
     const accuseBtn = document.createElement('button');
     accuseBtn.innerText = '👉 犯人を指名する';
     accuseBtn.style.cssText = "display:block; width:90%; margin:20px auto; padding:12px; background:#d32f2f; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;";
     accuseBtn.onclick = () => game.startAccusation();
     document.querySelector('#main-menu .content').appendChild(accuseBtn);
 
-    // Add Reset Button
     const resetBtn = document.createElement('button');
     resetBtn.innerText = '🔄 最初からやり直す';
     resetBtn.style.cssText = "display:block; width:90%; margin:10px auto; padding:10px; background:#555; color:white; border:none; border-radius:5px; cursor:pointer; font-size:0.9rem;";
