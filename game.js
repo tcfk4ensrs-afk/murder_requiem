@@ -12,7 +12,7 @@ class Game {
     }
 
     async init() {
-        await this.loadScenario('./scenarios/case1.json');
+        await this.loadScenario('/murder_requiem/scenarios/case1.json');
         this.loadState();
         this.renderCharacterList();
         this.updateAttributesUI();
@@ -301,3 +301,4 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') game.sendMessage();
     });
 });
+
