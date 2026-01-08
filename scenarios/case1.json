@@ -9,7 +9,7 @@
   "characters": [
     "scenarios/characters/kazumi.json",
     "scenarios/characters/seiji.json",
-    "scenarios/characters/yotuha.json",
+    "scenarios/characters/yotsuba.json",
     "scenarios/characters/renzo.json",
     "scenarios/characters/keigo.json"
   ],
@@ -29,4 +29,5 @@
     }
   ]
 }
+
 
