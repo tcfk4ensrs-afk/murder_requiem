@@ -17,13 +17,10 @@ class Game {
     }
 
     async init() {
-        // GitHub Pages でもローカルでも正しく読み込める
         await this.loadScenario(`${this.BASE}scenarios/case1.json`);
-
         this.loadState();
         this.renderCharacterList();
         this.updateAttributesUI();
-
     }
 
     async loadScenario(path) {
@@ -31,14 +28,12 @@ class Game {
             const res = await fetch(path);
             this.scenario = await res.json();
 
-            // Allow characters to be file paths (Split JSON support)
+            // キャラ JSON の読み込み（BASE 対応）
             if (this.scenario.characters) {
                 const charPromises = this.scenario.characters.map(async (charOrPath) => {
                     if (typeof charOrPath === 'string') {
-                        // Fetch external character json
-                        // Assuming relative to scenario file or root? Let's assume relative to root for now or scenarios folder
-                        // If path in json is "characters/doctor.json", simple fetch works if base is correct.
-                        const charRes = await fetch(charOrPath);
+                        const fullPath = `${this.BASE}${charOrPath.replace('./', '')}`;
+                        const charRes = await fetch(fullPath);
                         return await charRes.json();
                     }
                     return charOrPath;
@@ -46,9 +41,10 @@ class Game {
                 this.scenario.characters = await Promise.all(charPromises);
             }
 
-            // Title setting
+            // タイトル反映
             document.getElementById('case-title').innerText = this.scenario.case.title;
             document.getElementById('case-outline').innerText = this.scenario.case.outline;
+
         } catch (e) {
             console.error("Failed to load scenario", e);
             alert("シナリオ読み込みエラー詳細: " + e.message);
@@ -57,20 +53,17 @@ class Game {
 
     resetGame() {
         if (confirm("本当にリセットしますか？\nこれまでの会話履歴や証拠はすべて失われます。")) {
-            localStorage.clear(); // Clear all data
+            localStorage.clear();
             alert("リセットしました。ページを再読み込みします。");
             location.reload();
         }
     }
 
     loadState() {
-        // ... (existing code, ensure it handles new structure if needed, but strict state loading is fine)
         const saved = localStorage.getItem('mystery_game_state_v1');
         if (saved) {
             this.state = JSON.parse(saved);
         } else {
-            // Initial State
-            // Unlock initial evidences
             if (this.scenario && this.scenario.evidences) {
                 this.scenario.evidences.forEach(ev => {
                     if (ev.unlock_condition === 'start') {
@@ -89,7 +82,6 @@ class Game {
         if (!this.state.evidences.includes(evidenceId)) {
             this.state.evidences.push(evidenceId);
             this.saveState();
-            // TODO: Notify user of new evidence
         }
     }
 
@@ -100,6 +92,7 @@ class Game {
     renderCharacterList() {
         const list = document.getElementById('character-list');
         list.innerHTML = '';
+
         this.scenario.characters.forEach(char => {
             const div = document.createElement('div');
             div.className = 'character-card';
@@ -154,32 +147,20 @@ class Game {
 
         input.value = '';
 
-        // Add User Message
         this.appendMessage('user', text);
 
-        // Prepare System Prompt
         const char = this.getCharacter(this.currentCharacterId);
         const systemPrompt = this.constructSystemPrompt(char);
 
-        // Call AI
-        // Simplify history for API context (optional: for now just sending last turn or implementing full history later)
-        // For context-aware AI, we should send history.
-        // But sendToAI interface is (system, user). 
-        // We might need to adjust sendToAI to accept history or handle it here by concatenating.
-        // Let's concat history for now to fit the simple interface.
         const history = this.state.history[this.currentCharacterId] || [];
-        // Take last few messages to keep context window manageable if needed, or all.
         const contextStr = history.map(h => `${h.role === 'user' ? 'プレイヤー' : char.name}: ${h.text}`).join("\n");
 
-        // Actually, for better roleplay, we pass the raw user prompt but the 'System' prompt contains context?
-        // Let's try combining:
         const combinedUserPrompt = `${contextStr}\nプレイヤー: ${text}\n(この発言に対する返答を生成してください)`;
 
         const responseText = await sendToAI(systemPrompt, combinedUserPrompt);
 
         this.appendMessage('model', responseText);
 
-        // Check for evidence unlock conditions
         this.checkEvidenceUnlock(text, responseText);
     }
 
@@ -193,13 +174,14 @@ class Game {
     }
 
     constructSystemPrompt(char) {
-        // Collect known evidences
         const knownEvidences = this.state.evidences.map(eid => {
             const e = this.scenario.evidences.find(ev => ev.id === eid);
             return e ? `${e.name}: ${e.description}` : null;
         }).filter(Boolean).join("\n");
 
         return `
+
+        
 あなたはミステリーゲームの登場人物「${char.name}」として振る舞ってください。
 以下の設定を厳守すること。
 
@@ -309,5 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') game.sendMessage();
     });
 });
+
 
 
