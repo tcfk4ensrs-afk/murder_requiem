@@ -9,13 +9,21 @@ class Game {
             history: {}, // { charId: [{role, text}] }
             flags: {}
         };
+
+        // GitHub Pages とローカルの両方で動く BASE パス
+        this.BASE = window.location.pathname.includes('murder_requiem')
+            ? '/murder_requiem/'
+            : './';
     }
 
     async init() {
-        await this.loadScenario('/murder_requiem/scenarios/case1.json');
+        // GitHub Pages でもローカルでも正しく読み込める
+        await this.loadScenario(`${this.BASE}scenarios/case1.json`);
+
         this.loadState();
         this.renderCharacterList();
         this.updateAttributesUI();
+
     }
 
     async loadScenario(path) {
@@ -301,4 +309,5 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') game.sendMessage();
     });
 });
+
 
