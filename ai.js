@@ -1,21 +1,52 @@
-import { CONFIG } from './config.js';
+
+let LOC_CONFIG = {
+    AI_TYPE: 'gemini',
+    API_KEY: '',
+    API_URL_GEMINI: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent',
+};
+
+let configLoaded = false;
+
+async function loadConfig() {
+    if (configLoaded) return;
+    try {
+        const module = await import('./config.js');
+        if (module.CONFIG) {
+            LOC_CONFIG = { ...LOC_CONFIG, ...module.CONFIG };
+        }
+    } catch (e) {
+        console.log('Running in generic mode (no config.js found).');
+        const savedKey = localStorage.getItem('mystery_ai_api_key');
+        if (savedKey) {
+            LOC_CONFIG.API_KEY = savedKey;
+        }
+    }
+    configLoaded = true;
+}
 
 export async function sendToAI(systemPrompt, userPrompt) {
-    if (CONFIG.AI_TYPE === 'gemini') {
-        return callGemini(systemPrompt, userPrompt);
-    } else if (CONFIG.AI_TYPE === 'gpt') {
-        return callGPT(systemPrompt, userPrompt);
-    } else {
-        throw new Error('Unknown AI Type');
+    await loadConfig();
+
+    // Check Config
+    if (!LOC_CONFIG.API_KEY || LOC_CONFIG.API_KEY === 'YOUR_API_KEY_HERE') {
+        const key = prompt("Google Gemini APIキーを入力してください:\n(ブラウザに保存され、外部には送信されません)");
+        if (key) {
+            LOC_CONFIG.API_KEY = key;
+            localStorage.setItem('mystery_ai_api_key', key);
+        } else {
+            return "エラー: APIキーが入力されませんでした。";
+        }
     }
+
+    if (LOC_CONFIG.AI_TYPE === 'gemini') {
+        return callGemini(systemPrompt, userPrompt);
+    } // ...
 }
 
 async function callGemini(system, user) {
-    if (!CONFIG.API_KEY) {
-        return "エラー: APIキーが設定されていません。config.jsを確認してください。";
-    }
+    // LOC_CONFIG used here
+    const url = `${LOC_CONFIG.API_URL_GEMINI}?key=${LOC_CONFIG.API_KEY}`;
 
-    const url = `${CONFIG.API_URL_GEMINI}?key=${CONFIG.API_KEY}`;
 
     // Gemini 1.5 format
     const contents = [
