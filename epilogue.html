@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>真相 - Epilogue</title>
+    <style>
+        :root {
+            --bg-color: #000;
+            --text-color: #e0e0e0;
+            --accent-color: #8ab4f8;
+            --danger-color: #d32f2f;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Sawarabi Mincho', 'Hiragino Mincho ProN', 'serif';
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        #epilogue-container {
+            max-width: 700px;
+            width: 100%;
+            line-height: 2;
+            white-space: pre-wrap;
+            animation: fadeIn 3s ease-in;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: var(--danger-color);
+            text-align: center;
+            letter-spacing: 0.3rem;
+            font-size: 1.8rem;
+            margin-top: 20px;
+            margin-bottom: 40px;
+        }
+
+        /* アクションボタンの共通スタイル */
+        .action-btn {
+            background: #1a1a1a;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 12px 30px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.4s ease;
+            margin: 20px auto;
+            display: block;
+        }
+
+        .action-btn:hover {
+            background: var(--accent-color);
+            color: #000;
+            box-shadow: 0 0 15px rgba(138, 180, 248, 0.4);
+        }
+
+        /* 暗証番号入力エリア */
+        #pass-area {
+            display: none;
+            text-align: center;
+            margin: 40px 0;
+            padding: 30px;
+            border: 1px solid #333;
+            background: #0a0a0a;
+            animation: fadeIn 1s;
+        }
+
+        #pass-input {
+            background: #222;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 10px;
+            font-size: 1.5rem;
+            letter-spacing: 0.5rem;
+            text-align: center;
+            width: 180px;
+            margin-bottom: 20px;
+            outline: none;
+        }
+
+        /* 手紙の表示エリア */
+        #letter-content {
+            display: none;
+            max-width: 650px;
+            background-color: #111;
+            border: 1px solid #222;
+            padding: 40px;
+            margin-top: 40px;
+            line-height: 2.2;
+            color: #ccc;
+            box-shadow: 0 0 40px rgba(255,255,255,0.03);
+            animation: slideUp 2s ease-out;
+            white-space: pre-wrap;
+            border-left: 3px solid var(--accent-color);
+        }
+
+        #trunk-button {
+            display: none;
+            margin: 50px auto;
+        }
+
+        .back-link {
+            display: block;
+            margin: 80px 0;
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: var(--accent-color);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideUp { 
+            from { opacity: 0; transform: translateY(40px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="epilogue-container">
+        <h1 id="result-title"></h1>
+        <div id="result-text"></div>
+        
+        <button id="trunk-button" class="action-btn" onclick="showPassInput()">🧳 トランクを調べる</button>
+
+        <div id="pass-area">
+            <p style="font-size: 0.9rem; color: #aaa; margin-bottom: 15px;">5桁の暗証番号を入力してください</p>
+            <input type="text" id="pass-input" maxlength="5" placeholder="*****" onkeydown="if(event.key==='Enter') checkPassword()"><br>
+            <button class="action-btn" onclick="checkPassword()">解錠</button>
+        </div>
+
+        <div id="letter-content"></div>
+
+        <a href="index.html" class="back-link">タイトルへ戻る</a>
+    </div>
+
+    <script>
+        window.onload = () => {
+            // game.jsから渡された結果を取得
+            const result = JSON.parse(sessionStorage.getItem('game_result'));
+            
+            if (!result) {
+                document.getElementById('result-text').innerText = "データが見つかりません。TOPからやり直してください。";
+                return;
+            }
+
+            document.getElementById('result-title').innerText = result.title;
+            document.getElementById('result-text').innerText = result.text;
+
+            // 正解（蓮三）の場合のみ、一定時間後にトランクボタンを表示
+            if (result.isCorrect) {
+                setTimeout(() => {
+                    document.getElementById('trunk-button').style.display = 'block';
+                }, 3500); // 読了時間を考慮して3.5秒後に表示
+            }
+        };
+
+        // パスワード入力欄を表示
+        function showPassInput() {
+            document.getElementById('trunk-button').style.display = 'none';
+            document.getElementById('pass-area').style.display = 'block';
+            document.getElementById('pass-input').focus();
+        }
+
+        // パスワード照合
+        function checkPassword() {
+            const val = document.getElementById('pass-input').value;
+            if (val === "13542") {
+                revealLetter();
+            } else {
+                alert("暗証番号が正しくありません。");
+            }
+        }
+
+        // 手紙を表示
+        function revealLetter() {
+            document.getElementById('pass-area').style.display = 'none';
+            const letter = document.getElementById('letter-content');
+            letter.style.display = 'block';
+            
+            letter.innerText = `開かれた中に入っていたのは、手紙と、「明日へのレクイエム」の楽譜……母さんの秘密がそこにあった。
+手紙には、こう書かれていた。
+
+「私には紗季(さき)というバイオリニストの親友がいた。かつて紗季と行人は付き合っていて、紗季のお腹には子供が宿っていた。でも紗季は、交通事故にあって亡くなったの。幸いなことにお腹の子供だけは助かった。このままでは母親のいない子になってしまう。そう思った私は行人と結婚し、二人で子供を育てていく決心をした。その子供の名が……一海。
+やがて私と行人の愛情が深まり、あなたたち兄弟姉妹(きょうだい)が産まれて行ったの……。
+
+もう一つの秘密。トランクにある「明日へのレクイエム」の楽譜には、私が作曲者として名前を書いている。行人の死後に発表された曲は、すべて私が書いていたの。どの曲も行人のことを想って書いた曲……。
+私は胸の病気のせいで、もう長くはないと医者に言われた。
+死後、曲の権利はすべて放棄して、誰でも自由に使える曲にするわ。残った財産は、あなたたちで均等に分けて欲しい。……私はもうすぐ、行人のもとへ旅立ちます。
+
+だから「明日へのレクイエム」を、私を送る時に流して欲しいの。行人と私が生きた証としてね。
+あなたたちはこれから、自分の人生の音色を奏でなさい。そこに決められた楽譜は無いのだから……」
+
+いつの間にか空は澄んで、晴れ渡っていた。
+遠くからパトカーのサイレンの音が聞こえてくる――。《終》`;
+            
+            // 表示後に手紙の位置へスクロール
+            letter.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
