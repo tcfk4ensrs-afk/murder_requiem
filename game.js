@@ -335,13 +335,47 @@ ${knownEvidences}
     startAccusation() {
         const culpritName = prompt("犯人だと思う人物名を入力してください：");
         if (!culpritName) return;
+
         const target = (this.scenario.characters || []).find(c => c.name === culpritName);
         if (!target) return alert("そのような人物はいません。");
-        if (target.id === this.scenario.case.culprit) {
-            alert(`【正解！】\n真犯人は ${target.name} でした。\n\n真相：\n${this.scenario.case.truth}`);
-        } else {
-            alert(`【不正解】\n${target.name} は犯人ではありません。`);
+
+        // 指名前の最終確認
+        if (!confirm(`本当に ${target.name} が犯人だと指摘しますか？\n(この後、真相解明シーンへ移動します)`)) {
+            return;
         }
+
+        let resultData = { title: "", text: "", isCorrect: false };
+
+        if (target.id === "renzo" || culpritName.includes("蓮三")) {
+            // 正解（蓮三）の場合の全文
+            resultData.isCorrect = true;
+            resultData.title = "【TRUE END - 真相】";
+            resultData.text = `ああ。そうさ……俺が犯人さ。
+理由はそう……12年前。父さんと母さんが廊下でケンカをしていた。その時の母さんは泣いていた。
+自分の部屋に戻ると、しばらくして三階のテラスから、父さんの声が聞こえた。
+「泣いたって何も解決しないだろ!」
+その直後、悲鳴と共に窓の外を落下していく父さんと、目が合った。
+俺はこう思った。母さんが、父さんを突き落としたのかもしれないと。
+
+昨日の夜、曲の権利を手放そうとしている母さんを止めたくて、22時に屋敷を訪れた。
+理由を聞くと、母さんは急に「権利は放棄して、誰でも使える曲にするの」と言い出した!
+そして「もう12年……忘れなさい。あなたたちには将来があるじゃない。前だけを向いて歩いてほしいの」と言ったんだ。その瞬間俺は、怒りがわいた。作曲家としての父さんを尊敬していたから、許せなかった。
+
+「父さんは、母さんに将来を絶たれたんだ!!」と、思わず灰皿で頭を殴ってしまった……。
+……そう言えば母さんは、最後に「トランクを……」と、言い残して死んだ。あの言葉は何だったんだろう。`;
+        } else {
+            // 不正解（蓮三以外）の場合の全文
+            resultData.isCorrect = false;
+            resultData.title = "【BAD END - 誤認逮捕】";
+            resultData.text = `「自分は絶対、母さんを殺したりしない!」 迫って来るみんなへ、必死に抵抗した。
+すると、兄弟姉妹(きょうだい)の中から、「もう、やめよう……」という声がした。
+先ほど声を発した人物が、続けてこう言った。
+「みんな間違ってる……母さんを殺したのは――」`;
+        }
+
+        // 結果をブラウザの一時メモリに保存して遷移
+        sessionStorage.setItem('game_result', JSON.stringify(resultData));
+        window.location.href = 'epilogue.html';
     }
 }
 
@@ -367,4 +401,5 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
+
 
