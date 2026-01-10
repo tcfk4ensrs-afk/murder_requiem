@@ -113,15 +113,23 @@ class Game {
         const lastTime = this.state.unlockTimestamps.last_exploration || 0;
         const isCoolingDown = (this.state.visitedLocation && (now - lastTime < tenMinutes));
 
+        // 各場所（6〜10）の本来の名前を定義
+        const locationNames = {
+            6: "屋敷の中1(母の寝室・トイレ・ピアノ室)",
+            7: "屋敷の中2(母の寝室・倉庫)",
+            8: "書斎1",
+            9: "書斎2",
+            10: "書斎3"
+        };
+
         for (let i = 6; i <= 10; i++) {
             const btn = document.getElementById(`loc-btn-${i}`);
             if (!btn) continue;
             
             if (isCoolingDown) {
-                // クールタイム中はすべて操作不可
                 btn.disabled = true;
                 if (this.state.visitedLocation == i) {
-                    btn.innerText = `探索済: ${i}`;
+                    btn.innerText = `探索済: ${i} (待機中)`;
                     btn.classList.add('visited');
                     btn.classList.remove('unlocked');
                 } else {
@@ -130,15 +138,9 @@ class Game {
                     btn.classList.remove('visited');
                 }
             } else {
-                // 準備完了または初回時
+                // クールタイム終了時、または初回時に名称を表示
                 btn.disabled = false;
-                // 元のテキストを表示するためにHTMLのテキストを保持するか、以下のようにリセット
-                if (i === 6) btn.innerText = "屋敷の中1(母の寝室・トイレ・ピアノ室)";
-                else if (i === 7) btn.innerText = "屋敷の中2(母の寝室・倉庫)";
-                else if (i === 8) btn.innerText = "書斎1";
-                else if (i === 9) btn.innerText = "書斎2";
-                else if (i === 10) btn.innerText = "書斎3";
-                
+                btn.innerText = locationNames[i]; // ここで定義した名称を反映
                 btn.classList.add('unlocked');
                 btn.classList.remove('visited');
             }
@@ -365,3 +367,4 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
+
