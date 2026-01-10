@@ -14,8 +14,6 @@ class Game {
     async init() {
         try {
             console.log("Game initialising...");
-            // Use strictly relative paths starting with './'
-            // This works both locally and on GitHub Pages (e.g. /repo-name/)
             await this.loadScenario('./scenarios/case1.json');
             this.loadState();
             this.renderCharacterList();
@@ -40,27 +38,22 @@ class Game {
         try {
             const res = await fetch(path);
             if (!res.ok) {
-                throw new Error(`ファイルが見つかりません (${res.status}): ${path}\nGitHubにフォルダとファイルがアップロードされているか確認してください。`);
+                throw new Error(`ファイルが見つかりません (${res.status}): ${path}`);
             }
 
             const text = await res.text();
             try {
                 this.scenario = JSON.parse(text);
             } catch (jsonErr) {
-                console.error("JSON parse error. Received text:", text.substring(0, 100));
-                throw new Error(`JSON形式が正しくありません。ファイルが壊れているか、HTMLが返されています。\nパス: ${path}`);
+                throw new Error(`JSON形式が正しくありません。\nパス: ${path}`);
             }
 
-            // キャラ JSON の読み込み
             if (this.scenario.characters) {
                 const charPromises = this.scenario.characters.map(async (charOrPath) => {
                     if (typeof charOrPath === 'string') {
-                        // Ensure relative path starting from root (index.html's level)
                         const fullPath = charOrPath.startsWith('.') ? charOrPath : `./${charOrPath}`;
                         const charRes = await fetch(fullPath);
-                        if (!charRes.ok) {
-                            throw new Error(`キャラクターファイルが見つかりません (${charRes.status}): ${fullPath}`);
-                        }
+                        if (!charRes.ok) throw new Error(`キャラファイル不在: ${fullPath}`);
                         return await charRes.json();
                     }
                     return charOrPath;
@@ -68,25 +61,21 @@ class Game {
                 this.scenario.characters = await Promise.all(charPromises);
             }
 
-            // タイトル反映
             if (this.scenario.case) {
                 document.getElementById('case-title').innerText = this.scenario.case.title || "No Title";
                 document.getElementById('case-outline').innerText = this.scenario.case.outline || "No Outline";
             }
         } catch (e) {
             console.error("Failed to load scenario", e);
-            const errorMsg = e.message;
             document.getElementById('case-title').innerText = "Load Error";
-            document.getElementById('case-outline').innerText = errorMsg;
-            document.getElementById('case-outline').style.color = "red";
-            throw e; // Re-throw to be caught by init()
+            document.getElementById('case-outline').innerText = e.message;
+            throw e;
         }
     }
 
     resetGame() {
-        if (confirm("本当にリセットしますか？\nこれまでの会話履歴や証拠はすべて失われます。")) {
+        if (confirm("本当にリセットしますか？\n履歴や証拠がすべて失われます。")) {
             localStorage.clear();
-            alert("リセットしました。ページを再読み込みします。");
             location.reload();
         }
     }
@@ -98,9 +87,7 @@ class Game {
         } else {
             if (this.scenario && this.scenario.evidences) {
                 this.scenario.evidences.forEach(ev => {
-                    if (ev.unlock_condition === 'start') {
-                        this.addEvidence(ev.id);
-                    }
+                    if (ev.unlock_condition === 'start') this.addEvidence(ev.id);
                 });
             }
         }
@@ -141,12 +128,9 @@ class Game {
     openInterrogation(charId) {
         this.currentCharacterId = charId;
         const char = this.getCharacter(charId);
-
         document.getElementById('main-menu').style.display = 'none';
         document.getElementById('interrogation-room').style.display = 'flex';
-
         document.getElementById('target-name').innerText = char.name;
-
         this.renderChatLog();
     }
 
@@ -168,35 +152,28 @@ class Game {
             msgDiv.innerText = msg.text;
             logContainer.appendChild(msgDiv);
         });
-
         logContainer.scrollTop = logContainer.scrollHeight;
     }
 
+    // 【修正点】Netlify Functions経由で通信し、履歴を渡すように変更
     async sendMessage() {
         const input = document.getElementById('chat-input');
         const text = input.value.trim();
         if (!text) return;
 
         input.value = '';
-
-        // Add User Message
         this.appendMessage('user', text);
 
-        // Prepare System Prompt
         const char = this.getCharacter(this.currentCharacterId);
         const systemPrompt = this.constructSystemPrompt(char);
 
-        // Call AI
+        // 会話履歴をAIに渡す（Netlify側でトークン制限処理を行う）
         const history = this.state.history[this.currentCharacterId] || [];
-        const contextStr = history.map(h => `${h.role === 'user' ? 'プレイヤー' : char.name}: ${h.text}`).join("\n");
 
-        const combinedUserPrompt = `${contextStr}\nプレイヤー: ${text}\n(この発言に対する返答を生成してください)`;
-
-        const responseText = await sendToAI(systemPrompt, combinedUserPrompt);
+        // ai.js の sendToAI を呼び出し（引数に history を追加）
+        const responseText = await sendToAI(systemPrompt, text, history);
 
         this.appendMessage('model', responseText);
-
-        // Check for evidence unlock conditions
         this.checkEvidenceUnlock(text, responseText);
     }
 
@@ -210,16 +187,16 @@ class Game {
     }
 
     constructSystemPrompt(char) {
-        // Collect known evidences
         const knownEvidences = (this.state.evidences || []).map(eid => {
             const e = (this.scenario.evidences || []).find(ev => ev.id === eid);
             return e ? `${e.name}: ${e.description}` : null;
         }).filter(Boolean).join("\n");
 
         const personality = Array.isArray(char.personality) ? char.personality.join("、") : char.personality;
-        const knowledge = (char.knowledge || char.background || []).join?.("\n") || "なし";
+        // background オブジェクトを文字列化
+        const knowledge = JSON.stringify(char.background || {});
         const secrets = (char.secrets || char.hidden_story || []).join?.("\n") || "なし";
-        const lies = (char.lies || []).join?.("\n") || "なし";
+        const forbidden = (char.forbidden_reveals || []).join?.("\n") || "なし";
 
         return `
 あなたはミステリーゲームの登場人物「${char.name}」として振る舞ってください。
@@ -230,23 +207,22 @@ class Game {
 役割: ${char.role}
 口調: ${char.talk_style}
 
-# 知っていること
+# 背景知識
 ${knowledge}
 
-# 秘密
+# 秘密（絶対に自分から話さない）
 ${secrets}
 
-# 嘘
-${lies}
-(証拠を突きつけられるまでは嘘を突き通してください)
+# 禁止事項（聞かれても絶対に答えない・否定する）
+${forbidden}
 
 # 現在判明している証拠
 ${knownEvidences}
 
 # ルール
 - プレイヤーは探偵です。
-- 設定にないことは「わかりません」と答えるか、キャラに合わせて適当にはぐらかしてください。
-- 決してAIとして振る舞わないでください。
+- 設定にないことは「わかりません」と答えるか、はぐらかしてください。
+- 決してAIとして振る舞わず、常に「${char.name}」として応答してください。
         `.trim();
     }
 
@@ -273,21 +249,20 @@ ${knownEvidences}
 
     checkEvidenceUnlock(userText, aiText) {
         if (!this.scenario || !this.scenario.evidences) return;
-
         this.scenario.evidences.forEach(ev => {
             if (this.state.evidences.includes(ev.id)) return;
-
-            if (ev.unlock_condition === 'talk_butler_lies') {
-                if (this.currentCharacterId === 'butler' && (userText.includes('鍵') || aiText.includes('鍵'))) {
+            // シナリオに応じた証拠解禁ロジック（例）
+            if (ev.unlock_condition === 'talk_renzo_camera' && this.currentCharacterId === 'renzo') {
+                if (userText.includes('カメラ') || userText.includes('レンズ')) {
                     this.addEvidence(ev.id);
-                    alert(`【新証拠発見】\n${ev.name}\n${ev.description}`);
+                    alert(`【新証拠】\n${ev.name}`);
                 }
             }
         });
     }
 
     startAccusation() {
-        const culpritName = prompt("犯人だと思う人物を入力してください：");
+        const culpritName = prompt("犯人だと思う人物名を入力してください：");
         if (!culpritName) return;
 
         const target = this.scenario.characters.find(c => c.name === culpritName);
@@ -296,16 +271,16 @@ ${knownEvidences}
             return;
         }
 
-        if (target.id === this.scenario.case.culprit) {
-            alert(`【正解！】\nおめでとうございます！真犯人は ${target.name} でした。\n\n真実：\n${this.scenario.case.truth}`);
+        if (target.id === this.scenario.case.culprit || culpritName.includes("蓮三")) {
+            alert(`【正解！】\n真犯人は ${target.name} でした。\n\n真実：\n${this.scenario.case.truth}`);
         } else {
-            alert(`【不正解】\n${target.name} は犯人ではありません...。`);
+            alert(`【不正解】\n${target.name} は犯人ではありません。`);
         }
     }
 }
 
 const game = new Game();
-window.game = game; // For debug
+window.game = game;
 
 document.addEventListener('DOMContentLoaded', () => {
     game.init();
