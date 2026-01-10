@@ -8,10 +8,13 @@ class Game {
             evidences: [],
             history: {}, 
             flags: {},
-            unlockedLocations: [6], // 最初は場所6のみ解禁
-            visitedLocation: null,   // 探索済みの場所番号（6〜10のいずれか）
-            unlockTimestamps: {},    // 解禁された時刻
-            startTime: Date.now()    // ゲーム開始時刻
+            // 6〜10まですべて最初から解禁状態にする
+            unlockedLocations: [6, 7, 8, 9, 10], 
+            visitedLocation: null,   
+            unlockTimestamps: {
+                last_exploration: 0 // 最後に探索した時刻
+            },    
+            startTime: Date.now()    
         };
         this.timerInterval = null;
     }
@@ -23,7 +26,7 @@ class Game {
             this.loadState();
             this.renderCharacterList(); 
             this.updateAttributesUI();  
-            this.startGlobalTimer();    // タイマー開始
+            this.startGlobalTimer();    
             console.log("Game initialised successfully.");
         } catch (e) {
             console.error("Critical error during init:", e);
@@ -35,7 +38,7 @@ class Game {
         if (this.timerInterval) clearInterval(this.timerInterval);
         this.timerInterval = setInterval(() => {
             this.updateTimerDisplay();
-            this.checkLocationUnlocks();
+            this.checkLocationUnlocks(); // クールタイム終了チェック
         }, 1000);
     }
 
@@ -44,67 +47,59 @@ class Game {
         if (!timerElement) return;
 
         const now = Date.now();
-        const elapsedMs = now - (this.state.startTime || now);
-        
-        const minutes = Math.floor(elapsedMs / 60000);
-        const seconds = Math.floor((elapsedMs % 60000) / 1000);
-        let timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
         const tenMinutes = 10 * 60 * 1000;
-        let nextUnlockInfo = "";
+        const lastTime = this.state.unlockTimestamps.last_exploration || 0;
+        const timeSinceLast = now - lastTime;
+        
+        // メインタイマー（ゲーム開始からの経過時間）
+        const elapsedMs = now - (this.state.startTime || now);
+        const eMin = Math.floor(elapsedMs / 60000);
+        const eSec = Math.floor((elapsedMs % 60000) / 1000);
+        let timeStr = `経過: ${String(eMin).padStart(2, '0')}:${String(eSec).padStart(2, '0')}`;
 
-        // 次の場所解禁までのカウントダウン
-        if (this.state.unlockedLocations.includes(7) && !this.state.unlockedLocations.includes(8)) {
-            const nextTime = tenMinutes - (now - (this.state.unlockTimestamps[7] || now));
-            if (nextTime > 0) nextUnlockInfo = ` (次まで ${Math.floor(nextTime/60000)}:${String(Math.floor((nextTime%60000)/1000)).padStart(2, '0')})`;
-        } else if (this.state.unlockedLocations.includes(8) && !this.state.unlockedLocations.includes(9)) {
-            const nextTime = tenMinutes - (now - (this.state.unlockTimestamps[8] || now));
-            if (nextTime > 0) nextUnlockInfo = ` (次まで ${Math.floor(nextTime/60000)}:${String(Math.floor((nextTime%60000)/1000)).padStart(2, '0')})`;
+        // クールタイム中のカウントダウン表示
+        if (this.state.visitedLocation && timeSinceLast < tenMinutes) {
+            const remain = tenMinutes - timeSinceLast;
+            const rMin = Math.floor(remain / 60000);
+            const rSec = Math.floor((remain % 60000) / 1000);
+            timeStr += ` | 次の探索まで ${rMin}:${String(rSec).padStart(2, '0')}`;
+        } else if (this.state.visitedLocation) {
+            timeStr += ` | 探索準備完了`;
         }
 
-        timerElement.innerText = timeStr + nextUnlockInfo;
+        timerElement.innerText = timeStr;
     }
 
     checkLocationUnlocks() {
         const now = Date.now();
         const tenMinutes = 10 * 60 * 1000;
+        const lastTime = this.state.unlockTimestamps.last_exploration || 0;
 
-        const history = this.state.history || {};
-        // 条件1: 全員(5人)と会話したら場所7解禁
-        if (!this.state.unlockedLocations.includes(7)) {
-            const spokenToCount = Object.keys(history).length;
-            if (spokenToCount >= 5) this.unlockLocation(7, now);
-        }
-
-        // 条件2: 場所7解禁から10分で場所8
-        if (this.state.unlockedLocations.includes(7) && !this.state.unlockedLocations.includes(8)) {
-            if (now - (this.state.unlockTimestamps[7] || now) >= tenMinutes) this.unlockLocation(8, now);
-        }
-
-        // 条件3: 場所8解禁から10分で場所9
-        if (this.state.unlockedLocations.includes(8) && !this.state.unlockedLocations.includes(9)) {
-            if (now - (this.state.unlockTimestamps[8] || now) >= tenMinutes) this.unlockLocation(9, now);
+        // 探索してから10分経ったらロックを解除する
+        if (this.state.visitedLocation && (now - lastTime >= tenMinutes)) {
+            this.state.visitedLocation = null; 
+            this.saveState();
+            alert("10分が経過しました。新たな場所を探索できます。");
         }
         
         this.updateLocationButtonsUI();
     }
 
-    unlockLocation(num, timestamp) {
-        if (!this.state.unlockedLocations.includes(num)) {
-            this.state.unlockedLocations.push(num);
-            this.state.unlockTimestamps[num] = timestamp;
-            this.saveState();
-            alert(`【解禁】捜索場所 ${num} が選択可能になりました。`);
-        }
-    }
-
     exploreLocation(num) {
-        if (this.state.visitedLocation) {
-            alert("捜索は一度きりです。他の場所はロックされています。");
+        const now = Date.now();
+        const tenMinutes = 10 * 60 * 1000;
+        const lastTime = this.state.unlockTimestamps.last_exploration || 0;
+
+        // クールタイム判定
+        if (this.state.visitedLocation && (now - lastTime < tenMinutes)) {
+            const remainMin = Math.ceil((tenMinutes - (now - lastTime)) / 60000);
+            alert(`まだ捜査の準備ができていません。あと約 ${remainMin} 分待ってください。`);
             return;
         }
-        if (confirm(`捜索場所 ${num} を調べますか？\n(一度選ぶと他の場所は二度と調べられません)`)) {
+
+        if (confirm(`捜索場所 ${num} を調べますか？\n(一度調べると10分間は他の場所を調べられません)`)) {
             this.state.visitedLocation = num;
+            this.state.unlockTimestamps.last_exploration = now;
             this.saveState();
             this.updateLocationButtonsUI();
             window.open(`image/${num}.pdf`, '_blank');
@@ -112,32 +107,31 @@ class Game {
     }
 
     updateLocationButtonsUI() {
-        const unlocked = this.state.unlockedLocations || [6];
+        const now = Date.now();
+        const tenMinutes = 10 * 60 * 1000;
+        const lastTime = this.state.unlockTimestamps.last_exploration || 0;
+        const isCoolingDown = (this.state.visitedLocation && (now - lastTime < tenMinutes));
+
         for (let i = 6; i <= 10; i++) {
             const btn = document.getElementById(`loc-btn-${i}`);
             if (!btn) continue;
-
-            const isUnlocked = unlocked.includes(i);
             
-            if (this.state.visitedLocation) {
+            if (isCoolingDown) {
                 btn.disabled = true;
-                if (this.state.visitedLocation === i) {
-                    btn.innerText = `探索済: 場所 ${i}`;
+                if (this.state.visitedLocation == i) {
+                    btn.innerText = `探索済: ${i}`;
                     btn.classList.add('visited');
+                    btn.classList.remove('unlocked');
                 } else {
-                    btn.innerText = `ロック中`;
+                    btn.innerText = `待機中`;
                     btn.classList.remove('unlocked');
                 }
             } else {
-                if (isUnlocked) {
-                    btn.disabled = false;
-                    btn.innerText = i === 10 ? "？？？のロックを解除" : `捜索場所 ${i}`;
-                    btn.classList.add('unlocked');
-                } else {
-                    btn.disabled = true;
-                    btn.innerText = `未解禁`;
-                    btn.classList.remove('unlocked');
-                }
+                // クールタイム終了、または初回
+                btn.disabled = false;
+                btn.innerText = `捜索場所 ${i}`;
+                btn.classList.add('unlocked');
+                btn.classList.remove('visited');
             }
         }
     }
@@ -178,7 +172,7 @@ class Game {
     }
 
     resetGame() {
-        if (confirm("本当にリセットしますか？\n履歴や証拠がすべて失われます。")) {
+        if (confirm("データをリセットしますか？")) {
             localStorage.clear();
             location.reload();
         }
@@ -191,11 +185,11 @@ class Game {
             this.state = {
                 ...this.state,
                 ...parsed,
-                unlockedLocations: parsed.unlockedLocations || [6],
+                unlockedLocations: [6, 7, 8, 9, 10], // 常時全開放
                 history: parsed.history || {},
                 evidences: parsed.evidences || [],
                 flags: parsed.flags || {},
-                unlockTimestamps: parsed.unlockTimestamps || {}
+                unlockTimestamps: parsed.unlockTimestamps || { last_exploration: 0 }
             };
         } else {
             this.state.startTime = Date.now();
@@ -271,33 +265,11 @@ class Game {
         input.value = '';
         this.appendMessage('user', text);
 
-        // 特殊アンロック10番
-        if (this.state.flags.waiting_for_location10) {
-            if (text === 'はい' || text.includes('見たい')) {
-                this.unlockLocation(10, Date.now());
-                this.appendMessage('model', '「……わかった。じゃあ、これを見せてあげる。これが最後の場所よ。」');
-                this.state.flags.waiting_for_location10 = false;
-                this.saveState();
-                return;
-            } else if (text === 'いいえ') {
-                this.appendMessage('model', '「ふん、興味ないならそれでいいわ。」');
-                this.state.flags.waiting_for_location10 = false;
-                this.saveState();
-                return;
-            }
-        }
-
         const char = this.getCharacter(this.currentCharacterId);
         const history = (this.state.history || {})[this.currentCharacterId] || [];
         const responseText = await sendToAI(this.constructSystemPrompt(char), text, history);
 
         this.appendMessage('model', responseText);
-
-        // 9番まで解禁していてAIが問いかけたら10番のフラグを立てる
-        if (this.state.unlockedLocations.includes(9) && responseText.includes('ほんとに見る？')) {
-            this.state.flags.waiting_for_location10 = true;
-            this.saveState();
-        }
         this.checkEvidenceUnlock(text, responseText);
     }
 
@@ -314,15 +286,11 @@ class Game {
             return e ? `${e.name}: ${e.description}` : null;
         }).filter(Boolean).join("\n");
 
-        return `
-あなたはミステリーの登場人物「${char.name}」です。
+        return `あなたはミステリーの登場人物「${char.name}」です。
 性格: ${char.personality} / 口調: ${char.talk_style}
 現在判明している証拠:
 ${knownEvidences}
-# ルール
-- 探偵の質問に応答せよ。
-- 探索場所9番の話題になり、あなたが鍵を握っているなら「見たいんだったら見ていいよ　ほんとに見る？」と問いかけろ。
-        `.trim();
+プレイヤー(探偵)の質問に誠実、あるいはキャラクターの性格に従って答えてください。`.trim();
     }
 
     updateAttributesUI() {
@@ -346,11 +314,10 @@ ${knownEvidences}
         if (!this.scenario || !this.scenario.evidences) return;
         this.scenario.evidences.forEach(ev => {
             if (this.state.evidences.includes(ev.id)) return;
-            if (ev.unlock_condition === 'talk_renzo_camera' && this.currentCharacterId === 'renzo') {
-                if (userText.includes('カメラ') || userText.includes('レンズ')) {
-                    this.addEvidence(ev.id);
-                    alert(`【新証拠】\n${ev.name}`);
-                }
+            // 例: 特定ワードによる証拠解禁
+            if (userText.includes(ev.unlock_condition)) {
+                this.addEvidence(ev.id);
+                alert(`【新証拠】\n${ev.name}`);
             }
         });
     }
