@@ -1,6 +1,6 @@
 const API_KEY = process.env.GEMINI_API_KEY;
-// 修正後のURL
-const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+// netlify/functions/gemini.js の 2行目を書き換え
+const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
 
 export const handler = async (event) => {
     // POSTメソッド以外は受け付けない
