@@ -333,21 +333,48 @@ ${knownEvidences}
     }
 
     startAccusation() {
-        const culpritName = prompt("犯人だと思う人物名を入力してください：");
-        if (!culpritName) return;
+        // メインメニューのコンテンツを一時的に「犯人選択画面」に書き換える
+        const container = document.querySelector('#main-menu .content');
+        this.originalMenuHTML = container.innerHTML; // 元の画面を保存
 
-        const target = (this.scenario.characters || []).find(c => c.name === culpritName);
-        if (!target) return alert("そのような人物はいません。");
+        container.innerHTML = `
+            <h2 class="section-title">真犯人を指名してください</h2>
+            <div id="culprit-selection-list" class="character-grid"></div>
+            <button class="action-btn" onclick="game.cancelAccusation()" style="background:#555; margin-top:20px;">キャンセル</button>
+        `;
 
-        // 指名前の最終確認
-        if (!confirm(`本当に ${target.name} が犯人だと指摘しますか？\n(この後、真相解明シーンへ移動します)`)) {
+        const list = document.getElementById('culprit-selection-list');
+        this.scenario.characters.forEach(char => {
+            const div = document.createElement('div');
+            div.className = 'character-card culprit-card';
+            div.innerHTML = `
+                <div class="char-icon">👤</div>
+                <div class="char-name">${char.name}</div>
+                <button class="select-btn" style="margin-top:10px; padding:5px 10px; cursor:pointer;">この人物を指名</button>
+            `;
+            div.onclick = () => this.executeAccusation(char.id, char.name);
+            list.appendChild(div);
+        });
+    }
+
+    // 指名をキャンセルして元に戻る
+    cancelAccusation() {
+        const container = document.querySelector('#main-menu .content');
+        container.innerHTML = this.originalMenuHTML;
+        // ボタンの再登録（innerHTMLで消えるため）
+        this.renderCharacterList();
+        this.updateAttributesUI();
+    }
+
+    // 実際に判定してエピローグへ飛ばす
+    executeAccusation(charId, charName) {
+        if (!confirm(`本当に ${charName} が犯人だと指摘しますか？\n(この後、真相解明シーンへ移動します)`)) {
             return;
         }
 
         let resultData = { title: "", text: "", isCorrect: false };
 
-        if (target.id === "renzo" || culpritName.includes("蓮三")) {
-            // 正解（蓮三）の場合の全文
+        if (charId === "renzo") {
             resultData.isCorrect = true;
             resultData.title = "【TRUE END - 真相】";
             resultData.text = `ああ。そうさ……俺が犯人さ。
@@ -364,7 +391,6 @@ ${knownEvidences}
 「父さんは、母さんに将来を絶たれたんだ!!」と、思わず灰皿で頭を殴ってしまった……。
 ……そう言えば母さんは、最後に「トランクを……」と、言い残して死んだ。あの言葉は何だったんだろう。`;
         } else {
-            // 不正解（蓮三以外）の場合の全文
             resultData.isCorrect = false;
             resultData.title = "【BAD END - 誤認逮捕】";
             resultData.text = `「自分は絶対、母さんを殺したりしない!」 迫って来るみんなへ、必死に抵抗した。
@@ -373,7 +399,6 @@ ${knownEvidences}
 「みんな間違ってる……母さんを殺したのは――」`;
         }
 
-        // 結果をブラウザの一時メモリに保存して遷移
         sessionStorage.setItem('game_result', JSON.stringify(resultData));
         window.location.href = 'epilogue.html';
     }
@@ -401,5 +426,6 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
+
 
 
