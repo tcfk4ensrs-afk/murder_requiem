@@ -1,5 +1,6 @@
 const API_KEY = process.env.GEMINI_API_KEY;
-const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+// 修正後のURL
+const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 export const handler = async (event) => {
     // POSTメソッド以外は受け付けない
