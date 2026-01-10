@@ -5,6 +5,7 @@
     --card-bg: #2d2d2d;
     --chat-user-bg: #005c4b;
     --chat-ai-bg: #333333;
+    --danger-color: #d32f2f; /* 追加: 指名用の赤色 */
 }
 
 body {
@@ -55,13 +56,14 @@ p#case-outline {
 }
 
 .section-title {
-    margin-top: 15px; /* ボタン追加に合わせて余白を調整 */
+    margin-top: 15px;
     border-left: 4px solid var(--accent-color);
     padding-left: 10px;
     margin-bottom: 15px;
 }
 
-#character-list {
+/* 共通のグリッドレイアウト */
+#character-list, .character-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 15px;
@@ -72,13 +74,23 @@ p#case-outline {
     border-radius: 8px;
     padding: 15px;
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: all 0.2s;
     text-align: center;
 }
 
 .character-card:hover {
     transform: translateY(-2px);
     background-color: #383838;
+}
+
+/* 犯人指名カード固有のスタイル */
+.culprit-card {
+    border: 1px solid transparent;
+}
+
+.culprit-card:hover {
+    border-color: var(--danger-color);
+    background-color: #2a1010;
 }
 
 .char-icon {
@@ -96,9 +108,27 @@ p#case-outline {
     color: #999;
 }
 
+/* 指名決定ボタン */
+.select-btn {
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-weight: bold;
+    width: 100%;
+}
+
+.select-btn:hover {
+    background: #ff3333;
+}
+
 /* Interrogation Room */
 #interrogation-room {
-    display: none; /* Toggled by JS */
+    display: none;
     flex-direction: column;
     height: 100%;
     background-color: #121212;
@@ -188,11 +218,7 @@ p#case-outline {
     font-weight: bold;
 }
 
-/* --------------------------------------------------
-   追加: 探索場所ボタン & タイマー用スタイル
-   -------------------------------------------------- */
-
-/* 探索場所のグリッドレイアウト */
+/* 探索場所 & タイマー用スタイル */
 .location-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -200,7 +226,6 @@ p#case-outline {
     margin-bottom: 20px;
 }
 
-/* ボタンの基本デザイン */
 .loc-btn {
     padding: 12px;
     background-color: #222;
@@ -212,7 +237,6 @@ p#case-outline {
     transition: all 0.3s ease;
 }
 
-/* 解禁（アクティブ）状態 */
 .loc-btn.unlocked {
     background-color: #2d3a4f;
     color: #fff;
@@ -225,7 +249,6 @@ p#case-outline {
     transform: scale(1.02);
 }
 
-/* 探索済み（ロック）状態 */
 .loc-btn.visited {
     background-color: #1a4d2e;
     color: #81c784;
@@ -233,13 +256,11 @@ p#case-outline {
     cursor: not-allowed;
 }
 
-/* 未解禁/他箇所探索済みによるロック状態 */
 .loc-btn:disabled {
     opacity: 0.5;
     filter: grayscale(1);
 }
 
-/* タイマーのデザイン調整 */
 #timer-display {
     transition: border-color 0.5s ease;
 }
@@ -247,4 +268,18 @@ p#case-outline {
 #elapsed-time {
     color: var(--accent-color);
     text-shadow: 0 0 5px rgba(138, 180, 248, 0.3);
+}
+
+/* アクションボタン（犯人指名・リセットなど） */
+.action-btn {
+    display: block;
+    width: 90%;
+    margin: 10px auto;
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    color: white;
+    transition: background 0.3s;
 }
