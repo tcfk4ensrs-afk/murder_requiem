@@ -51,17 +51,31 @@
       margin: 30px 0;
     }
 
+   /* 画像と文字を縦に並べるための設定 */
     #gallery a {
-      display: inline-block;
+      display: flex;
+      flex-direction: column; /* 縦並び */
+      align-items: center;
+      background-color: var(--card-bg); /* 背景色をつけてカードっぽく */
       border: 2px solid var(--card-bg);
       border-radius: 8px;
       overflow: hidden;
       transition: transform 0.3s, border-color 0.3s;
+      text-decoration: none; /* 下線を消す */
     }
 
-    #gallery a:hover {
-      transform: scale(1.05);
-      border-color: var(--accent-color);
+    /* 文字のデザイン */
+    .caption {
+      padding: 8px 5px;
+      font-size: 0.85rem;
+      color: var(--text-color);
+      font-weight: bold;
+      letter-spacing: 0.1rem; /* 文字の間隔を少し広げてミステリー感を出す */
+    }
+
+    /* ホバー時の挙動 */
+    #gallery a:hover .caption {
+      color: var(--accent-color);
     }
 
     #gallery img {
