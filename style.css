@@ -55,9 +55,10 @@ p#case-outline {
 }
 
 .section-title {
-    margin-top: 0;
+    margin-top: 15px; /* ボタン追加に合わせて余白を調整 */
     border-left: 4px solid var(--accent-color);
     padding-left: 10px;
+    margin-bottom: 15px;
 }
 
 #character-list {
@@ -185,4 +186,65 @@ p#case-outline {
     align-items: center;
     justify-content: center;
     font-weight: bold;
+}
+
+/* --------------------------------------------------
+   追加: 探索場所ボタン & タイマー用スタイル
+   -------------------------------------------------- */
+
+/* 探索場所のグリッドレイアウト */
+.location-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+/* ボタンの基本デザイン */
+.loc-btn {
+    padding: 12px;
+    background-color: #222;
+    color: #666;
+    border: 1px solid #444;
+    border-radius: 6px;
+    cursor: not-allowed;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+/* 解禁（アクティブ）状態 */
+.loc-btn.unlocked {
+    background-color: #2d3a4f;
+    color: #fff;
+    border-color: var(--accent-color);
+    cursor: pointer;
+}
+
+.loc-btn.unlocked:hover {
+    background-color: #3a4b66;
+    transform: scale(1.02);
+}
+
+/* 探索済み（ロック）状態 */
+.loc-btn.visited {
+    background-color: #1a4d2e;
+    color: #81c784;
+    border-color: #2e7d32;
+    cursor: not-allowed;
+}
+
+/* 未解禁/他箇所探索済みによるロック状態 */
+.loc-btn:disabled {
+    opacity: 0.5;
+    filter: grayscale(1);
+}
+
+/* タイマーのデザイン調整 */
+#timer-display {
+    transition: border-color 0.5s ease;
+}
+
+#elapsed-time {
+    color: var(--accent-color);
+    text-shadow: 0 0 5px rgba(138, 180, 248, 0.3);
 }
