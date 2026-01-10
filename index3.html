@@ -10,17 +10,29 @@
 
 <body>
     <div id="app">
-        <!-- Main Menu Screen -->
         <div id="main-menu">
             <header>
                 <h1 id="case-title">Loading...</h1>
                 <p id="case-outline">---</p>
             </header>
 
+            <div id="timer-display" style="text-align: center; background: #222; padding: 10px; margin: 10px; border-radius: 5px; border: 1px solid var(--accent-color);">
+                <span style="color: var(--accent-color); font-size: 0.8rem; display: block;">経過時間 / 次の解禁まで</span>
+                <span id="elapsed-time" style="font-family: monospace; font-size: 1.2rem;">00:00</span>
+            </div>
+
             <div class="content">
                 <h2 class="section-title">容疑者リスト</h2>
                 <div id="character-list">
-                    <!-- JS Injected -->
+                    </div>
+
+                <h2 class="section-title">探索場所 (1回のみ選択可能)</h2>
+                <div id="location-list" class="location-grid">
+                    <button id="loc-btn-1" class="loc-btn" onclick="game.exploreLocation(1)">探索場所 1</button>
+                    <button id="loc-btn-2" class="loc-btn" onclick="game.exploreLocation(2)" disabled>探索場所 2 (未開放)</button>
+                    <button id="loc-btn-3" class="loc-btn" onclick="game.exploreLocation(3)" disabled>探索場所 3 (未開放)</button>
+                    <button id="loc-btn-4" class="loc-btn" onclick="game.exploreLocation(4)" disabled>探索場所 4 (未開放)</button>
+                    <button id="loc-btn-5" class="loc-btn" onclick="game.exploreLocation(5)" disabled>？？？</button>
                 </div>
 
                 <h2 class="section-title">所持証拠・情報</h2>
@@ -34,17 +46,14 @@
             </div>
         </div>
 
-        <!-- Interrogation Room Screen -->
         <div id="interrogation-room" style="display:none;">
             <header id="room-header">
                 <button id="back-btn">←</button>
                 <span id="target-name">Unknown</span>
-                <div style="width: 40px;"></div> <!-- Spacer -->
-            </header>
+                <div style="width: 40px;"></div> </header>
 
             <div id="chat-log">
-                <!-- Chat messages -->
-            </div>
+                </div>
 
             <div id="input-area">
                 <input type="text" id="chat-input" placeholder="質問を入力...">
@@ -52,7 +61,6 @@
             </div>
         </div>
 
-        <!-- Debug/Error Area -->
         <div id="error-log"
             style="display:none; margin:10px; padding:10px; background:#ffebee; border:1px solid #c62828; color:#c62828; font-size:0.8rem; white-space:pre-wrap;">
         </div>
