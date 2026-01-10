@@ -75,7 +75,7 @@ class Game {
         const tenMinutes = 10 * 60 * 1000;
         const lastTime = this.state.unlockTimestamps.last_exploration || 0;
 
-        // 探索してから10分経ったらロックを解除する
+        // 探索してから10分経ったらロックを解除して再探索可能にする
         if (this.state.visitedLocation && (now - lastTime >= tenMinutes)) {
             this.state.visitedLocation = null; 
             this.saveState();
@@ -90,7 +90,7 @@ class Game {
         const tenMinutes = 10 * 60 * 1000;
         const lastTime = this.state.unlockTimestamps.last_exploration || 0;
 
-        // クールタイム判定
+        // クールタイム判定（ロック中なら拒否）
         if (this.state.visitedLocation && (now - lastTime < tenMinutes)) {
             const remainMin = Math.ceil((tenMinutes - (now - lastTime)) / 60000);
             alert(`まだ捜査の準備ができていません。あと約 ${remainMin} 分待ってください。`);
@@ -102,6 +102,7 @@ class Game {
             this.state.unlockTimestamps.last_exploration = now;
             this.saveState();
             this.updateLocationButtonsUI();
+            // PDFファイルを開く
             window.open(`image/${num}.pdf`, '_blank');
         }
     }
@@ -117,19 +118,27 @@ class Game {
             if (!btn) continue;
             
             if (isCoolingDown) {
+                // クールタイム中はすべて操作不可
                 btn.disabled = true;
                 if (this.state.visitedLocation == i) {
                     btn.innerText = `探索済: ${i}`;
                     btn.classList.add('visited');
                     btn.classList.remove('unlocked');
                 } else {
-                    btn.innerText = `待機中`;
+                    btn.innerText = `ロック中`;
                     btn.classList.remove('unlocked');
+                    btn.classList.remove('visited');
                 }
             } else {
-                // クールタイム終了、または初回
+                // 準備完了または初回時
                 btn.disabled = false;
-                btn.innerText = `捜索場所 ${i}`;
+                // 元のテキストを表示するためにHTMLのテキストを保持するか、以下のようにリセット
+                if (i === 6) btn.innerText = "屋敷の中1(母の寝室・トイレ・ピアノ室)";
+                else if (i === 7) btn.innerText = "屋敷の中2(母の寝室・倉庫)";
+                else if (i === 8) btn.innerText = "書斎1";
+                else if (i === 9) btn.innerText = "書斎2";
+                else if (i === 10) btn.innerText = "書斎3";
+                
                 btn.classList.add('unlocked');
                 btn.classList.remove('visited');
             }
@@ -290,7 +299,7 @@ class Game {
 性格: ${char.personality} / 口調: ${char.talk_style}
 現在判明している証拠:
 ${knownEvidences}
-プレイヤー(探偵)の質問に誠実、あるいはキャラクターの性格に従って答えてください。`.trim();
+プレイヤー(探偵)の質問に対して、キャラクターとして応答してください。`.trim();
     }
 
     updateAttributesUI() {
@@ -314,7 +323,6 @@ ${knownEvidences}
         if (!this.scenario || !this.scenario.evidences) return;
         this.scenario.evidences.forEach(ev => {
             if (this.state.evidences.includes(ev.id)) return;
-            // 例: 特定ワードによる証拠解禁
             if (userText.includes(ev.unlock_condition)) {
                 this.addEvidence(ev.id);
                 alert(`【新証拠】\n${ev.name}`);
