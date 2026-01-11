@@ -5,6 +5,9 @@
     --card-bg: #2d2d2d;
     --chat-user-bg: #005c4b;
     --chat-ai-bg: #333333;
+    /* 探索ボタン用の追加カラー */
+    --visited-color: #4CAF50;
+    --locked-color: #444444;
 }
 
 body {
@@ -14,7 +17,6 @@ body {
     color: var(--text-color);
     display: flex;
     justify-content: center;
-    /* モバイルのツールバーを考慮した動的な高さ設定 */
     height: 100dvh; 
     overflow: hidden;
 }
@@ -22,7 +24,6 @@ body {
 #app {
     width: 100%;
     max-width: 600px;
-    /* 親要素(body)に合わせて動的に高さを調整 */
     height: 100%; 
     display: flex;
     flex-direction: column;
@@ -49,21 +50,81 @@ p#case-outline {
     margin: 5px 0 0 0;
 }
 
-/* Main Menu */
+/* --- Main Menu / Exploration Buttons --- */
 #main-menu {
     flex: 1;
     overflow-y: auto;
     padding: 20px;
-    /* 下部のボタンが隠れないよう余白を追加 */
     padding-bottom: calc(20px + env(safe-area-inset-bottom));
 }
 
 .section-title {
-    margin-top: 0;
+    margin: 20px 0 10px 0;
     border-left: 4px solid var(--accent-color);
     padding-left: 10px;
+    font-size: 1.1rem;
 }
 
+/* 探索ボタンのベーススタイル */
+[id^="loc-btn-"] {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: linear-gradient(145deg, #2d2d2d, #252525);
+    color: var(--text-color);
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 探索済み（既読）のボタン */
+[id^="loc-btn-"].visited {
+    border-color: var(--visited-color);
+    background: linear-gradient(145deg, #1b301c, #2d2d2d);
+    box-shadow: inset 0 0 10px rgba(76, 175, 80, 0.2);
+}
+
+[id^="loc-btn-"].visited::before {
+    content: "📁";
+    margin-right: 10px;
+}
+
+/* ロック中（クールタイム中）のボタン */
+[id^="loc-btn-"]:disabled:not(.visited) {
+    background: #1a1a1a;
+    color: #666;
+    border-color: #222;
+    cursor: not-allowed;
+}
+
+[id^="loc-btn-"]:disabled:not(.visited)::before {
+    content: "🔒";
+    margin-right: 10px;
+}
+
+/* 解放中（未探索）のボタン */
+[id^="loc-btn-"].unlocked:not(.visited) {
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 15px rgba(138, 180, 248, 0.1);
+}
+
+[id^="loc-btn-"].unlocked:not(.visited):hover {
+    transform: translateX(5px);
+    background: #333;
+}
+
+[id^="loc-btn-"].unlocked:not(.visited)::before {
+    content: "🔍";
+    margin-right: 10px;
+}
+
+/* --- Character List --- */
 #character-list {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -99,9 +160,9 @@ p#case-outline {
     color: #999;
 }
 
-/* Interrogation Room */
+/* --- Interrogation Room --- */
 #interrogation-room {
-    display: none; /* Toggled by JS */
+    display: none; 
     flex-direction: column;
     height: 100%;
     background-color: #121212;
@@ -161,7 +222,6 @@ p#case-outline {
     border-bottom-left-radius: 2px;
 }
 
-/* 考え中インジケーターのスタイル */
 .message.loading-indicator {
     background-color: transparent;
     border: 1px dashed #444;
@@ -179,7 +239,6 @@ p#case-outline {
 
 #input-area {
     display: flex;
-    /* 下部にセーフエリア分の余白を確保 */
     padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
     background-color: #202020;
     gap: 10px;
@@ -194,11 +253,9 @@ p#case-outline {
     background-color: #333;
     color: white;
     outline: none;
-    /* iOSでのズーム防止のためフォントサイズを調整（16px以上が推奨） */
     font-size: 1rem;
 }
 
-/* AIが考え中の時の入力欄の見た目 */
 #chat-input:disabled {
     opacity: 0.5;
     background-color: #222;
