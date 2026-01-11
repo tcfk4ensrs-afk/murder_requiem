@@ -4,13 +4,14 @@ class Game {
     constructor() {
         this.scenario = null;
         this.currentCharacterId = null;
-        this.isAiThinking = false; // 二重送信防止用
+        this.isAiThinking = false; 
         this.state = {
             evidences: [],
             history: {}, 
             flags: {},
             unlockedLocations: [6, 7, 8, 9, 10], 
-            visitedLocation: null,   
+            visitedLocations: [], // 修正：探索済みの場所を記録する配列
+            currentCoolingDown: false, // 修正：現在クールタイム中かどうか
             unlockTimestamps: {
                 last_exploration: 0 
             },    
@@ -56,13 +57,14 @@ class Game {
         const eSec = Math.floor((elapsedMs % 60000) / 1000);
         let timeStr = `経過: ${String(eMin).padStart(2, '0')}:${String(eSec).padStart(2, '0')}`;
 
-        if (this.state.visitedLocation && timeSinceLast < tenMinutes) {
+        // 修正：クールタイム中のカウントダウン表示
+        if (this.state.currentCoolingDown && timeSinceLast < tenMinutes) {
             const remain = tenMinutes - timeSinceLast;
             const rMin = Math.floor(remain / 60000);
             const rSec = Math.floor((remain % 60000) / 1000);
-            timeStr += ` | 次の探索まで ${rMin}:${String(rSec).padStart(2, '0')}`;
-        } else if (this.state.visitedLocation) {
-            timeStr += ` | 探索準備完了`;
+            timeStr += ` | 次の新エリア探索まで ${rMin}:${String(rSec).padStart(2, '0')}`;
+        } else if (this.state.currentCoolingDown) {
+            timeStr += ` | 新エリア探索準備完了`;
         }
 
         timerElement.innerText = timeStr;
@@ -73,8 +75,9 @@ class Game {
         const tenMinutes = 10 * 60 * 1000;
         const lastTime = this.state.unlockTimestamps.last_exploration || 0;
 
-        if (this.state.visitedLocation && (now - lastTime >= tenMinutes)) {
-            this.state.visitedLocation = null; 
+        // 修正：クールタイム終了チェック
+        if (this.state.currentCoolingDown && (now - lastTime >= tenMinutes)) {
+            this.state.currentCoolingDown = false; 
             this.saveState();
             alert("10分が経過しました。新たな場所を探索できます。");
         }
@@ -83,18 +86,26 @@ class Game {
     }
 
     exploreLocation(num) {
+        // すでに探索済みの場合は即座に開く
+        if (this.state.visitedLocations.includes(num)) {
+            window.open(`image/${num}.pdf`, '_blank');
+            return;
+        }
+
         const now = Date.now();
         const tenMinutes = 10 * 60 * 1000;
         const lastTime = this.state.unlockTimestamps.last_exploration || 0;
 
-        if (this.state.visitedLocation && (now - lastTime < tenMinutes)) {
+        // 新規探索時のクールタイム判定
+        if (this.state.currentCoolingDown && (now - lastTime < tenMinutes)) {
             const remainMin = Math.ceil((tenMinutes - (now - lastTime)) / 60000);
-            alert(`まだ捜査の準備ができていません。あと約 ${remainMin} 分待ってください。`);
+            alert(`まだ新しい捜査の準備ができていません。あと約 ${remainMin} 分待ってください。\n（探索済みの場所は見返せます）`);
             return;
         }
 
-        if (confirm(`捜索場所 ${num} を調べますか？\n(一度調べると10分間は他の場所を調べられません)`)) {
-            this.state.visitedLocation = num;
+        if (confirm(`捜索場所 ${num} を調べますか？\n(新しく調べると10分間は他の未探索場所を調べられません)`)) {
+            this.state.visitedLocations.push(num);
+            this.state.currentCoolingDown = true;
             this.state.unlockTimestamps.last_exploration = now;
             this.saveState();
             this.updateLocationButtonsUI();
@@ -106,7 +117,7 @@ class Game {
         const now = Date.now();
         const tenMinutes = 10 * 60 * 1000;
         const lastTime = this.state.unlockTimestamps.last_exploration || 0;
-        const isCoolingDown = (this.state.visitedLocation && (now - lastTime < tenMinutes));
+        const isCoolingDown = (this.state.currentCoolingDown && (now - lastTime < tenMinutes));
 
         const locationNames = {
             6: "屋敷の中1(母の寝室・トイレ・ピアノ室)",
@@ -120,19 +131,26 @@ class Game {
             const btn = document.getElementById(`loc-btn-${i}`);
             if (!btn) continue;
             
-            if (isCoolingDown) {
+            const isVisited = this.state.visitedLocations.includes(i);
+
+            if (isVisited) {
+                // 探索済みは常に有効
+                btn.disabled = false;
+                btn.innerText = `[閲覧可] ${locationNames[i]}`;
+                btn.style.opacity = "1";
+                btn.style.border = "2px solid #4CAF50"; // 緑枠などで既読感を出す
+            } else if (isCoolingDown) {
+                // 未探索かつクールタイム中
                 btn.disabled = true;
-                if (this.state.visitedLocation == i) {
-                    btn.innerText = `探索済: ${i} (待機中)`;
-                    btn.classList.add('visited');
-                } else {
-                    btn.innerText = `ロック中`;
-                }
+                btn.innerText = `ロック中`;
+                btn.style.opacity = "0.5";
+                btn.style.border = "none";
             } else {
+                // 未探索かつクールタイム終了
                 btn.disabled = false;
                 btn.innerText = locationNames[i];
-                btn.classList.add('unlocked');
-                btn.classList.remove('visited');
+                btn.style.opacity = "1";
+                btn.style.border = "none";
             }
         }
     }
@@ -187,6 +205,8 @@ class Game {
                 ...this.state,
                 ...parsed,
                 unlockedLocations: [6, 7, 8, 9, 10], 
+                visitedLocations: parsed.visitedLocations || [], // 修正
+                currentCoolingDown: parsed.currentCoolingDown || false, // 修正
                 history: parsed.history || {},
                 evidences: parsed.evidences || [],
                 flags: parsed.flags || {},
@@ -268,7 +288,6 @@ class Game {
         input.value = '';
         this.appendMessage('user', text);
 
-        // --- 「考え中」メッセージを表示 ---
         const logContainer = document.getElementById('chat-log');
         const loadingDiv = document.createElement('div');
         loadingDiv.className = 'message model loading-indicator';
@@ -277,18 +296,12 @@ class Game {
         logContainer.scrollTop = logContainer.scrollHeight;
 
         const char = this.getCharacter(this.currentCharacterId);
-        
-        // トークン節約のため、直近の会話履歴（10件＝5往復）のみ抽出
         const history = (this.state.history || {})[this.currentCharacterId] || [];
         const recentHistory = history.slice(-10);
 
         try {
-            // AIリクエスト
             const responseText = await sendToAI(this.constructSystemPrompt(char), text, recentHistory);
-
-            // 「考え中」を削除
             loadingDiv.remove();
-
             this.appendMessage('model', responseText);
             this.checkEvidenceUnlock(text, responseText);
         } catch (e) {
@@ -312,7 +325,6 @@ class Game {
             return e ? `${e.name}` : null;
         }).filter(Boolean).join(", ");
 
-        // トークン節約のため、役割と事実のみを簡潔に伝える
         return `Role:${char.name}. Persona:${char.personality}. Style:${char.talk_style}. FoundItems:${knownEvidences}. Reply as this character.`.trim();
     }
 
@@ -385,7 +397,7 @@ class Game {
 
         if (charId === "renzo") {
             resultData.isCorrect = true;
-            resultData.title = "【TRUE END - 真相】";
+            resultData.title = "【TRUE END - 真真】";
             resultData.text = `ああ。そうさ……俺が犯人さ。\n理由はそう……12年前。父さんと母さんが廊下でケンカをしていた。その時の母さんは泣いていた。\n自分の部屋に戻ると、しばらくして三階のテラスから、父さんの声が聞こえた。\n「泣いたって何も解決しないだろ!」\nその直後、悲鳴と共に窓の外を落下していく父さんと、目が合った。\n俺はこう思った。母さんが、父さんを突き落としたのかもしれないと。\n\n昨日の夜、曲の権利を手放そうとしている母さんを止めたくて、22時に屋敷を訪れた。\n理由を聞くと、母さんは急に「権利は放棄して、誰でも使える曲にするの」と言い出した!\nそして「もう12年……忘れなさい。あなたたちには将来があるじゃない。前だけを向いて歩いてほしいの」と言ったんだ。その瞬間俺は、怒りがわいた。作曲家としての父さんを尊敬していたから、許せなかった。\n\n「父さんは、母さんに将来を絶たれたんだ!!」と、思わず灰皿で頭を殴ってしまった……。\n……そう言えば母さんは、最後に「トランクを……」と、言い残して死んだ。あの言葉は何だったんだろう。`;
         } else {
             resultData.isCorrect = false;
@@ -409,7 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') game.sendMessage();
     });
     
-    // UIボタンの追加
     const menuContent = document.querySelector('#main-menu .content');
     const accuseBtn = document.createElement('button');
     accuseBtn.innerText = '👉 犯人を指名する';
