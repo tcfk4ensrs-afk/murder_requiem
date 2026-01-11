@@ -60,8 +60,8 @@ class Game {
         // 修正：クールタイム中のカウントダウン表示
         if (this.state.currentCoolingDown && timeSinceLast < tenMinutes) {
             const remain = tenMinutes - timeSinceLast;
-            const rMin = Math.floor(remain / 60000);
-            const rSec = Math.floor((remain % 60000) / 1000);
+            const rMin = Math.floor(remain / 10000);
+            const rSec = Math.floor((remain % 10000) / 1000);
             timeStr += ` | 次の新エリア探索まで ${rMin}:${String(rSec).padStart(2, '0')}`;
         } else if (this.state.currentCoolingDown) {
             timeStr += ` | 新エリア探索準備完了`;
@@ -434,3 +434,4 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
+
