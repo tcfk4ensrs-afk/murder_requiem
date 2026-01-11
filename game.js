@@ -4,15 +4,15 @@ class Game {
     constructor() {
         this.scenario = null;
         this.currentCharacterId = null;
+        this.isAiThinking = false; // 二重送信防止用
         this.state = {
             evidences: [],
             history: {}, 
             flags: {},
-            // 6〜10まですべて最初から解禁状態にする
             unlockedLocations: [6, 7, 8, 9, 10], 
             visitedLocation: null,   
             unlockTimestamps: {
-                last_exploration: 0 // 最後に探索した時刻
+                last_exploration: 0 
             },    
             startTime: Date.now()    
         };
@@ -38,7 +38,7 @@ class Game {
         if (this.timerInterval) clearInterval(this.timerInterval);
         this.timerInterval = setInterval(() => {
             this.updateTimerDisplay();
-            this.checkLocationUnlocks(); // クールタイム終了チェック
+            this.checkLocationUnlocks(); 
         }, 1000);
     }
 
@@ -51,13 +51,11 @@ class Game {
         const lastTime = this.state.unlockTimestamps.last_exploration || 0;
         const timeSinceLast = now - lastTime;
         
-        // メインタイマー（ゲーム開始からの経過時間）
         const elapsedMs = now - (this.state.startTime || now);
         const eMin = Math.floor(elapsedMs / 60000);
         const eSec = Math.floor((elapsedMs % 60000) / 1000);
         let timeStr = `経過: ${String(eMin).padStart(2, '0')}:${String(eSec).padStart(2, '0')}`;
 
-        // クールタイム中のカウントダウン表示
         if (this.state.visitedLocation && timeSinceLast < tenMinutes) {
             const remain = tenMinutes - timeSinceLast;
             const rMin = Math.floor(remain / 60000);
@@ -75,7 +73,6 @@ class Game {
         const tenMinutes = 10 * 60 * 1000;
         const lastTime = this.state.unlockTimestamps.last_exploration || 0;
 
-        // 探索してから10分経ったらロックを解除して再探索可能にする
         if (this.state.visitedLocation && (now - lastTime >= tenMinutes)) {
             this.state.visitedLocation = null; 
             this.saveState();
@@ -90,7 +87,6 @@ class Game {
         const tenMinutes = 10 * 60 * 1000;
         const lastTime = this.state.unlockTimestamps.last_exploration || 0;
 
-        // クールタイム判定（ロック中なら拒否）
         if (this.state.visitedLocation && (now - lastTime < tenMinutes)) {
             const remainMin = Math.ceil((tenMinutes - (now - lastTime)) / 60000);
             alert(`まだ捜査の準備ができていません。あと約 ${remainMin} 分待ってください。`);
@@ -102,7 +98,6 @@ class Game {
             this.state.unlockTimestamps.last_exploration = now;
             this.saveState();
             this.updateLocationButtonsUI();
-            // PDFファイルを開く
             window.open(`image/${num}.pdf`, '_blank');
         }
     }
@@ -113,7 +108,6 @@ class Game {
         const lastTime = this.state.unlockTimestamps.last_exploration || 0;
         const isCoolingDown = (this.state.visitedLocation && (now - lastTime < tenMinutes));
 
-        // 各場所（6〜10）の本来の名前を定義
         const locationNames = {
             6: "屋敷の中1(母の寝室・トイレ・ピアノ室)",
             7: "屋敷の中2(母の寝室・倉庫)",
@@ -131,16 +125,12 @@ class Game {
                 if (this.state.visitedLocation == i) {
                     btn.innerText = `探索済: ${i} (待機中)`;
                     btn.classList.add('visited');
-                    btn.classList.remove('unlocked');
                 } else {
                     btn.innerText = `ロック中`;
-                    btn.classList.remove('unlocked');
-                    btn.classList.remove('visited');
                 }
             } else {
-                // クールタイム終了時、または初回時に名称を表示
                 btn.disabled = false;
-                btn.innerText = locationNames[i]; // ここで定義した名称を反映
+                btn.innerText = locationNames[i];
                 btn.classList.add('unlocked');
                 btn.classList.remove('visited');
             }
@@ -196,7 +186,7 @@ class Game {
             this.state = {
                 ...this.state,
                 ...parsed,
-                unlockedLocations: [6, 7, 8, 9, 10], // 常時全開放
+                unlockedLocations: [6, 7, 8, 9, 10], 
                 history: parsed.history || {},
                 evidences: parsed.evidences || [],
                 flags: parsed.flags || {},
@@ -272,16 +262,41 @@ class Game {
     async sendMessage() {
         const input = document.getElementById('chat-input');
         const text = input.value.trim();
-        if (!text) return;
+        if (!text || this.isAiThinking) return;
+
+        this.isAiThinking = true;
         input.value = '';
         this.appendMessage('user', text);
 
-        const char = this.getCharacter(this.currentCharacterId);
-        const history = (this.state.history || {})[this.currentCharacterId] || [];
-        const responseText = await sendToAI(this.constructSystemPrompt(char), text, history);
+        // --- 「考え中」メッセージを表示 ---
+        const logContainer = document.getElementById('chat-log');
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'message model loading-indicator';
+        loadingDiv.innerText = '考え中...';
+        logContainer.appendChild(loadingDiv);
+        logContainer.scrollTop = logContainer.scrollHeight;
 
-        this.appendMessage('model', responseText);
-        this.checkEvidenceUnlock(text, responseText);
+        const char = this.getCharacter(this.currentCharacterId);
+        
+        // トークン節約のため、直近の会話履歴（10件＝5往復）のみ抽出
+        const history = (this.state.history || {})[this.currentCharacterId] || [];
+        const recentHistory = history.slice(-10);
+
+        try {
+            // AIリクエスト
+            const responseText = await sendToAI(this.constructSystemPrompt(char), text, recentHistory);
+
+            // 「考え中」を削除
+            loadingDiv.remove();
+
+            this.appendMessage('model', responseText);
+            this.checkEvidenceUnlock(text, responseText);
+        } catch (e) {
+            loadingDiv.innerText = "通信エラーが発生しました。";
+            console.error(e);
+        } finally {
+            this.isAiThinking = false;
+        }
     }
 
     appendMessage(role, text) {
@@ -294,14 +309,11 @@ class Game {
     constructSystemPrompt(char) {
         const knownEvidences = (this.state.evidences || []).map(eid => {
             const e = (this.scenario.evidences || []).find(ev => ev.id === eid);
-            return e ? `${e.name}: ${e.description}` : null;
-        }).filter(Boolean).join("\n");
+            return e ? `${e.name}` : null;
+        }).filter(Boolean).join(", ");
 
-        return `あなたはミステリーの登場人物「${char.name}」です。
-性格: ${char.personality} / 口調: ${char.talk_style}
-現在判明している証拠:
-${knownEvidences}
-プレイヤー(探偵)の質問に対して、キャラクターとして応答してください。`.trim();
+        // トークン節約のため、役割と事実のみを簡潔に伝える
+        return `Role:${char.name}. Persona:${char.personality}. Style:${char.talk_style}. FoundItems:${knownEvidences}. Reply as this character.`.trim();
     }
 
     updateAttributesUI() {
@@ -333,40 +345,37 @@ ${knownEvidences}
     }
 
     startAccusation() {
-        // メインメニューのコンテンツを一時的に「犯人選択画面」に書き換える
         const container = document.querySelector('#main-menu .content');
-        this.originalMenuHTML = container.innerHTML; // 元の画面を保存
+        this.originalMenuHTML = container.innerHTML; 
 
         container.innerHTML = `
             <h2 class="section-title">真犯人を指名してください</h2>
             <div id="culprit-selection-list" class="character-grid"></div>
-            <button class="action-btn" onclick="game.cancelAccusation()" style="background:#555; margin-top:20px;">キャンセル</button>
+            <button class="action-btn" onclick="game.cancelAccusation()" style="background:#555; margin-top:20px; width:100%; padding:10px; color:white; border:none; border-radius:5px;">キャンセル</button>
         `;
 
         const list = document.getElementById('culprit-selection-list');
         this.scenario.characters.forEach(char => {
             const div = document.createElement('div');
             div.className = 'character-card culprit-card';
+            div.style.marginTop = "10px";
             div.innerHTML = `
                 <div class="char-icon">👤</div>
                 <div class="char-name">${char.name}</div>
-                <button class="select-btn" style="margin-top:10px; padding:5px 10px; cursor:pointer;">この人物を指名</button>
+                <button class="select-btn" style="margin-top:10px; padding:5px 10px; cursor:pointer; background:var(--accent-color); border:none; border-radius:3px;">この人物を指名</button>
             `;
             div.onclick = () => this.executeAccusation(char.id, char.name);
             list.appendChild(div);
         });
     }
 
-    // 指名をキャンセルして元に戻る
     cancelAccusation() {
         const container = document.querySelector('#main-menu .content');
         container.innerHTML = this.originalMenuHTML;
-        // ボタンの再登録（innerHTMLで消えるため）
         this.renderCharacterList();
         this.updateAttributesUI();
     }
 
-    // 実際に判定してエピローグへ飛ばす
     executeAccusation(charId, charName) {
         if (!confirm(`本当に ${charName} が犯人だと指摘しますか？\n(この後、真相解明シーンへ移動します)`)) {
             return;
@@ -377,26 +386,11 @@ ${knownEvidences}
         if (charId === "renzo") {
             resultData.isCorrect = true;
             resultData.title = "【TRUE END - 真相】";
-            resultData.text = `ああ。そうさ……俺が犯人さ。
-理由はそう……12年前。父さんと母さんが廊下でケンカをしていた。その時の母さんは泣いていた。
-自分の部屋に戻ると、しばらくして三階のテラスから、父さんの声が聞こえた。
-「泣いたって何も解決しないだろ!」
-その直後、悲鳴と共に窓の外を落下していく父さんと、目が合った。
-俺はこう思った。母さんが、父さんを突き落としたのかもしれないと。
-
-昨日の夜、曲の権利を手放そうとしている母さんを止めたくて、22時に屋敷を訪れた。
-理由を聞くと、母さんは急に「権利は放棄して、誰でも使える曲にするの」と言い出した!
-そして「もう12年……忘れなさい。あなたたちには将来があるじゃない。前だけを向いて歩いてほしいの」と言ったんだ。その瞬間俺は、怒りがわいた。作曲家としての父さんを尊敬していたから、許せなかった。
-
-「父さんは、母さんに将来を絶たれたんだ!!」と、思わず灰皿で頭を殴ってしまった……。
-……そう言えば母さんは、最後に「トランクを……」と、言い残して死んだ。あの言葉は何だったんだろう。`;
+            resultData.text = `ああ。そうさ……俺が犯人さ。\n理由はそう……12年前。父さんと母さんが廊下でケンカをしていた。その時の母さんは泣いていた。\n自分の部屋に戻ると、しばらくして三階のテラスから、父さんの声が聞こえた。\n「泣いたって何も解決しないだろ!」\nその直後、悲鳴と共に窓の外を落下していく父さんと、目が合った。\n俺はこう思った。母さんが、父さんを突き落としたのかもしれないと。\n\n昨日の夜、曲の権利を手放そうとしている母さんを止めたくて、22時に屋敷を訪れた。\n理由を聞くと、母さんは急に「権利は放棄して、誰でも使える曲にするの」と言い出した!\nそして「もう12年……忘れなさい。あなたたちには将来があるじゃない。前だけを向いて歩いてほしいの」と言ったんだ。その瞬間俺は、怒りがわいた。作曲家としての父さんを尊敬していたから、許せなかった。\n\n「父さんは、母さんに将来を絶たれたんだ!!」と、思わず灰皿で頭を殴ってしまった……。\n……そう言えば母さんは、最後に「トランクを……」と、言い残して死んだ。あの言葉は何だったんだろう。`;
         } else {
             resultData.isCorrect = false;
             resultData.title = "【BAD END - 誤認逮捕】";
-            resultData.text = `「自分は絶対、母さんを殺したりしない!」 迫って来るみんなへ、必死に抵抗した。
-すると、兄弟姉妹(きょうだい)の中から、「もう、やめよう……」という声がした。
-先ほど声を発した人物が、続けてこう言った。
-「みんな間違ってる……母さんを殺したのは――」`;
+            resultData.text = `「自分は絶対、母さんを殺したりしない!」 迫って来るみんなへ、必死に抵抗した。\nすると、兄弟姉妹(きょうだい)の中から、「もう、やめよう……」という声がした。\n先ほど声を発した人物が、続けてこう言った。\n「みんな間違ってる……母さんを殺したのは――」`;
         }
 
         sessionStorage.setItem('game_result', JSON.stringify(resultData));
@@ -414,18 +408,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('chat-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') game.sendMessage();
     });
+    
+    // UIボタンの追加
     const menuContent = document.querySelector('#main-menu .content');
     const accuseBtn = document.createElement('button');
     accuseBtn.innerText = '👉 犯人を指名する';
     accuseBtn.style.cssText = "display:block; width:90%; margin:20px auto; padding:12px; background:#d32f2f; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;";
     accuseBtn.onclick = () => game.startAccusation();
     menuContent.appendChild(accuseBtn);
+
     const resetBtn = document.createElement('button');
     resetBtn.innerText = '🔄 最初からやり直す';
     resetBtn.style.cssText = "display:block; width:90%; margin:10px auto; padding:10px; background:#555; color:white; border:none; border-radius:5px; cursor:pointer;";
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
-
-
-
