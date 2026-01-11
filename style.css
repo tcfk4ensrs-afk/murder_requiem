@@ -161,6 +161,22 @@ p#case-outline {
     border-bottom-left-radius: 2px;
 }
 
+/* 考え中インジケーターのスタイル */
+.message.loading-indicator {
+    background-color: transparent;
+    border: 1px dashed #444;
+    color: #888;
+    font-style: italic;
+    align-self: flex-start;
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
+}
+
 #input-area {
     display: flex;
     /* 下部にセーフエリア分の余白を確保 */
@@ -182,6 +198,12 @@ p#case-outline {
     font-size: 1rem;
 }
 
+/* AIが考え中の時の入力欄の見た目 */
+#chat-input:disabled {
+    opacity: 0.5;
+    background-color: #222;
+}
+
 #send-btn {
     background-color: var(--accent-color);
     border: none;
@@ -194,4 +216,9 @@ p#case-outline {
     justify-content: center;
     font-weight: bold;
     flex-shrink: 0;
+}
+
+#send-btn:disabled {
+    background-color: #444;
+    cursor: not-allowed;
 }
