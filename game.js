@@ -226,12 +226,41 @@ class Game {
         localStorage.setItem('mystery_game_state_v1', JSON.stringify(this.state));
     }
 
-    addEvidence(evidenceId) {
-        if (!this.state.evidences.includes(evidenceId)) {
-            this.state.evidences.push(evidenceId);
-            this.saveState();
+   // Game.js 内の addEvidence を修正
+addEvidence(evidenceId) {
+    if (!this.state.evidences.includes(evidenceId)) {
+        this.state.evidences.push(evidenceId);
+        this.saveState();
+
+        // 証拠品データを取得
+        const ev = (this.scenario.evidences || []).find(e => e.id === evidenceId);
+        if (ev) {
+            this.showEvidenceCutin(ev.name); // カットイン表示
         }
     }
+}
+
+// カットイン表示用のメソッドを新規追加
+showEvidenceCutin(evidenceName) {
+    // 既存のカットインがあれば削除
+    const oldCutin = document.querySelector('.evidence-cutin');
+    if (oldCutin) oldCutin.remove();
+
+    const cutin = document.createElement('div');
+    cutin.className = 'evidence-cutin';
+    cutin.innerHTML = `
+        <h2>EVIDENCE UNLOCKED</h2>
+        <p>${evidenceName}</p>
+    `;
+    document.body.appendChild(cutin);
+
+    // SEを鳴らす場合はここで（例: new Audio('path/to/se.mp3').play();）
+
+    // アニメーション終了後に要素を削除
+    setTimeout(() => {
+        if (cutin.parentNode) cutin.remove();
+    }, 2500);
+}
 
     getCharacter(id) {
         return (this.scenario.characters || []).find(c => c.id === id);
@@ -506,6 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
+
 
 
 
