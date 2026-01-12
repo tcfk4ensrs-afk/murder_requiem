@@ -18,14 +18,26 @@
   {
     "id": "crime_scene_coffee",
     "name": "現場のコーヒー",
-    "description": "書斎の机に2客分。1杯は手付かず、1杯は飲みかけ。晴二はアレルギーのため飲めない。",
+    "description": "書斎の机に2客分。1杯は手付かず、1杯は飲みかけ。",
+    "unlock_condition": "start"
+  },
+  {
+    "id": "broken_window",
+    "name": "書斎の割れた窓",
+    "description": "窓ガラスが外から割られ、床に破片が散らばっている。",
+    "unlock_condition": "start"
+  },
+  {
+    "id": "ashtray_residue",
+    "name": "灰皿の吸い殻",
+    "description": "凶器と思われる重厚な灰皿に、2種類の吸い殻が残されている。",
     "unlock_condition": "start"
   },
   {
     "id": "seiji_allergy",
     "name": "晴二のアレルギー",
     "description": "長男・晴二は重度のコーヒーアレルギー。自分からコーヒーを飲むことは絶対にない。",
-    "unlock_condition": "start"
+    "unlock_condition": "seiji:アレルギー"
   },
   {
     "id": "pierce_fragment",
@@ -71,6 +83,7 @@
   }
   ]
 }
+
 
 
 
