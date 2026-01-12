@@ -320,33 +320,31 @@ class Game {
     }
 
     constructSystemPrompt(char) {
-        // 1. 全キャラ共通の「現場の客観的事実」を定義
-        // これにより、AIがアレルギー設定などを無視して矛盾した嘘をつくのを防ぎます
-        const commonKnowledge = `
+    // 1. 全キャラ共通の「現場の客観的事実」を定義
+    const commonKnowledge = `
 【現場の客観的事実（全キャラ共通認識）】
 - 被害者は書斎で倒れており、死因は後頭部への一撃（凶器は血の付いた重厚な灰皿）。
 - 現場（書斎）の机には2客のコーヒーがあった。1杯は手付かず、1杯は飲みかけ。
 - 長男・晴二は重度のコーヒーアレルギーであり、コーヒーを飲むことは物理的に不可能である。
 - 書斎の窓は外から割られているが、玄関の鍵は蓮三が到着した際、施錠されていた。
 - 昨晩の屋敷内では、タバコの臭いが漂っていた。
-        `.trim();
+    `.trim();
 
-        // 2. 現在プレイヤーが持っている証拠品の詳細リストを作成
-        const knownEvidencesList = (this.state.evidences || []).map(eid => {
-            const e = (this.scenario.evidences || []).find(ev => ev.id === eid);
-            return e ? `- ${e.name}: ${e.description}` : null;
-        }).filter(Boolean).join("\n");
+    // 2. 現在プレイヤーが持っている証拠品の詳細リストを作成
+    const knownEvidencesList = (this.state.evidences || []).map(eid => {
+        const e = (this.scenario.evidences || []).find(ev => ev.id === eid);
+        return e ? `- ${e.name}: ${e.description}` : null;
+    }).filter(Boolean).join("\n");
 
-        // 3. キャラクター固有の「証拠品に対する反応設定」を取得
-        const evidenceReactions = JSON.stringify(char.evidence_reactions || []);
+    // 3. キャラクター固有の「証拠品に対する反応設定」を取得
+    const evidenceReactions = JSON.stringify(char.evidence_reactions || []);
 
-        // 4. 家族関係（性別・順序）の補強
-        // JSONにfamily_relationがある場合はそれを使用し、ない場合はroleを使用
-        const familyContext = char.family_relation ? 
-            `あなたの家族関係: ${JSON.stringify(char.family_relation)}` : 
-            `あなたの役割: ${char.role}`;
+    // 4. 家族関係（性別・順序）の補強
+    const familyContext = char.family_relation ? 
+        `あなたの家族関係: ${JSON.stringify(char.family_relation)}` : 
+        `あなたの役割: ${char.role}`;
 
-        return `
+    return `
 あなたはミステリーゲームの登場人物「${char.name}」として振る舞ってください。
 以下の【絶対的な真実】と【証拠品提示ルール】を厳守すること。
 
@@ -372,16 +370,18 @@ ${knownEvidencesList}
 【証拠品への反応定義】
 ${evidenceReactions}
 
-### 応答の指針
-1. 証拠品を提示されていない段階では、秘密を隠し、嘘やはぐらかしで対応してください。
-2. 適切な証拠を突きつけられたら、動揺を見せ、一部の真実を白状してください。
-3. 設定にない勝手な嘘を捏造しないでください。
+### 応答の指針（重要：聞き込みの連鎖）
+1. 自分の秘密は必死に隠してください。
+2. しかし、自分が疑われたり、厳しい追及を受けた場合は、容疑を逸らすために「他の家族の不審な動き」を積極的に暴露してください。
+   - 例：「私はやっていない！そういえば、〇〇が怪しい動きをしていたのを見た」と具体名を出すこと。
+3. 適切な証拠を突きつけられたら、動揺を見せ、一部の真実を白状してください。
+4. 設定にない勝手な嘘を捏造しないでください。
 
 ### 応答形式
 outer_voice: キャラとしての発言。証拠を突きつけられたら動揺を見せること。
-inner_voice: キャラとしての内心。プレイヤーに「どの証拠が効いたか」や「他の兄弟への疑念」のヒントを独り言として漏らしてください。
+inner_voice: キャラとしての内心。プレイヤーに「誰が証拠を持っているか」や「次に誰を問い詰めるべきか」のヒントを、独り言として必ず含めてください。
 `.trim();
-    }
+}
 
     updateAttributesUI() {
         this.updateLocationButtonsUI();
@@ -506,6 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
+
 
 
 
