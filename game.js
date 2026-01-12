@@ -6,30 +6,28 @@ class Game {
         this.currentCharacterId = null;
         this.isAiThinking = false; 
         this.state = {
-            difficulty: 'detective', // デフォルト：探偵モード
+            difficulty: 'detective', 
             evidences: [],
             history: {}, 
             flags: {},
             unlockedLocations: [6, 7, 8, 9, 10], 
             visitedLocations: [], 
             currentCoolingDown: false, 
-            unlockTimestamps: {
-                last_exploration: 0 
-            },    
+            unlockTimestamps: { last_exploration: 0 },    
             startTime: Date.now()    
         };
         this.timerInterval = null;
     }
 
-    // --- 初期化ロジック ---
+    // --- 初期化 ---
     async init() {
         try {
             console.log("Game initialising...");
             await this.loadScenario('./scenarios/case1.json');
-            this.loadState(); // ここで difficulty も読み込まれる
+            this.loadState(); 
             this.renderCharacterList(); 
             this.updateAttributesUI();  
-            this.updateDifficultyUI(); // 追加：起動時にUIを同期
+            this.updateDifficultyUI(); 
             this.startGlobalTimer();
             console.log("Game initialised successfully.");
         } catch (e) {
@@ -38,7 +36,7 @@ class Game {
         }
     }
 
-    // --- モード管理（難易度） ---
+    // --- モード管理 ---
     setDifficulty(mode) {
         this.state.difficulty = mode;
         this.saveState();
@@ -49,17 +47,12 @@ class Game {
         const btnDet = document.getElementById('mode-detective');
         const btnMas = document.getElementById('mode-master');
         if (!btnDet || !btnMas) return;
-
-        if (this.state.difficulty === 'master') {
-            btnMas.classList.add('mode-active');
-            btnDet.classList.remove('mode-active');
-        } else {
-            btnDet.classList.add('mode-active');
-            btnMas.classList.remove('mode-active');
-        }
+        const isMaster = this.state.difficulty === 'master';
+        btnMas.classList.toggle('mode-active', isMaster);
+        btnDet.classList.toggle('mode-active', !isMaster);
     }
 
-    // --- メッセージ・AI通信ロジック ---
+    // --- メッセージ・AI通信 ---
     async sendMessage() {
         const input = document.getElementById('chat-input');
         const text = input.value.trim();
@@ -83,11 +76,7 @@ class Game {
         try {
             const responseText = await sendToAI(this.constructSystemPrompt(char), text, recentHistory);
             loadingDiv.remove();
-            
-            // AIの応答をパースして表示（モード判定を含む）
             this.appendMessage('model', responseText);
-            
-            // 証拠品のアンロックチェック
             this.checkEvidenceUnlock(text, responseText);
         } catch (e) {
             loadingDiv.innerText = "通信エラーが発生しました。";
@@ -98,32 +87,19 @@ class Game {
     }
 
     appendMessage(role, text) {
-        if (!this.state.history[this.currentCharacterId]) {
-            this.state.history[this.currentCharacterId] = [];
-        }
-
+        if (!this.state.history[this.currentCharacterId]) this.state.history[this.currentCharacterId] = [];
         let displayOuter = text;
         let displayInner = "";
 
-        // AIの応答(model)から発言と内心を分離
         if (role === 'model') {
             const outerMatch = text.match(/outer_voice[:：]\s*([\s\S]*?)(?=inner_voice|$)/i);
             const innerMatch = text.match(/inner_voice[:：]\s*([\s\S]*)/i);
-            
             displayOuter = outerMatch ? outerMatch[1].trim() : text;
             displayInner = innerMatch ? innerMatch[1].trim() : "";
         }
 
-        // 全データを履歴に保存
-        this.state.history[this.currentCharacterId].push({ 
-            role, 
-            text, 
-            displayOuter, 
-            displayInner 
-        });
+        this.state.history[this.currentCharacterId].push({ role, text, displayOuter, displayInner });
         this.saveState();
-
-        // 描画実行
         this.renderSingleMessage(role, displayOuter, displayInner);
     }
 
@@ -131,172 +107,121 @@ class Game {
         const logContainer = document.getElementById('chat-log');
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${role}`;
-
         let html = `<div>${outerText}</div>`;
-
-        // 名探偵モード(master)の場合のみ、内心を表示する
         if (role === 'model' && this.state.difficulty === 'master' && innerText) {
-            html += `
-                <div class="inner-thought" style="font-size: 0.8rem; color: #888; margin-top: 8px; border-top: 1px dotted #444; padding-top: 5px; font-style: italic;">
-                    （内心：${innerText}）
-                </div>`;
+            html += `<div class="inner-thought" style="font-size:0.8rem; color:#888; margin-top:8px; border-top:1px dotted #444; padding-top:5px; font-style:italic;">（内心：${innerText}）</div>`;
         }
-
         msgDiv.innerHTML = html;
         logContainer.appendChild(msgDiv);
         logContainer.scrollTop = logContainer.scrollHeight;
     }
 
-    // --- シナリオ・証拠品・探索ロジック ---
+    // --- 証拠・探索ロジック ---
     loadState() {
         const saved = localStorage.getItem('mystery_game_state_v1');
         if (saved) {
             const parsed = JSON.parse(saved);
             this.state = { ...this.state, ...parsed };
-        } else {
-            this.state.startTime = Date.now();
         }
-
-        // 初期証拠(start)の自動登録
         if (this.scenario && this.scenario.evidences) {
             this.scenario.evidences.forEach(ev => {
                 if (ev.unlock_condition === 'start' && !this.state.evidences.includes(ev.id)) {
                     this.state.evidences.push(ev.id);
                 }
             });
-            this.saveState();
         }
     }
 
-    saveState() {
-        localStorage.setItem('mystery_game_state_v1', JSON.stringify(this.state));
-    }
+    saveState() { localStorage.setItem('mystery_game_state_v1', JSON.stringify(this.state)); }
 
     addEvidence(evidenceId) {
         if (!this.state.evidences.includes(evidenceId)) {
             this.state.evidences.push(evidenceId);
             this.saveState();
-
             const ev = (this.scenario.evidences || []).find(e => e.id === evidenceId);
-            if (ev) {
-                this.showEvidenceCutin(ev.name);
-            }
+            if (ev) this.showEvidenceCutin(ev.name);
         }
     }
 
     showEvidenceCutin(evidenceName) {
         const oldCutin = document.querySelector('.evidence-cutin');
         if (oldCutin) oldCutin.remove();
-
         const cutin = document.createElement('div');
         cutin.className = 'evidence-cutin';
         cutin.innerHTML = `<h2>EVIDENCE UNLOCKED</h2><p>${evidenceName}</p>`;
         document.body.appendChild(cutin);
-
         setTimeout(() => { if (cutin.parentNode) cutin.remove(); }, 2500);
     }
 
     checkEvidenceUnlock(userText, aiText) {
         if (!this.scenario || !this.scenario.evidences) return;
-
         this.scenario.evidences.forEach(ev => {
-            if (this.state.evidences.includes(ev.id)) return;
-            if (ev.unlock_condition === "start") return;
-
-            const conditionParts = ev.unlock_condition.split(':');
-            if (conditionParts.length !== 2) return;
-
-            const targetCharId = conditionParts[0];
-            const keyword = conditionParts[1];
-
-            if (this.currentCharacterId === targetCharId && aiText.includes(keyword)) {
+            if (this.state.evidences.includes(ev.id) || ev.unlock_condition === "start") return;
+            const parts = ev.unlock_condition.split(':');
+            if (parts.length === 2 && this.currentCharacterId === parts[0] && aiText.includes(parts[1])) {
                 this.addEvidence(ev.id);
-                const charName = this.getCharacter(targetCharId).name;
                 setTimeout(() => {
-                    this.appendMessage('system', `【分析完了】${charName}の発言から重要な証拠「${ev.name}」を入手しました。`);
+                    this.appendMessage('system', `【分析完了】${this.getCharacter(parts[0]).name}の発言から証拠「${ev.name}」を入手。`);
                     this.updateAttributesUI();
                 }, 600);
             }
         });
     }
 
-    // --- 以下、既存のUI/探索/告発メソッド群 ---
-
+    // --- UI/タイマー ---
     startGlobalTimer() {
         if (this.timerInterval) clearInterval(this.timerInterval);
-        this.timerInterval = setInterval(() => {
-            this.updateTimerDisplay();
-            this.checkLocationUnlocks(); 
-        }, 1000);
+        this.timerInterval = setInterval(() => { this.updateTimerDisplay(); this.checkLocationUnlocks(); }, 1000);
     }
 
     updateTimerDisplay() {
         const timerElement = document.getElementById('elapsed-time');
         if (!timerElement) return;
         const now = Date.now();
-        const tenMinutes = 10 * 60 * 1000;
-        const lastTime = this.state.unlockTimestamps.last_exploration || 0;
-        const timeSinceLast = now - lastTime;
-        const elapsedMs = now - (this.state.startTime || now);
-        const eMin = Math.floor(elapsedMs / 60000);
-        const eSec = Math.floor((elapsedMs % 60000) / 1000);
-        let timeStr = `経過: ${String(eMin).padStart(2, '0')}:${String(eSec).padStart(2, '0')}`;
-        if (this.state.currentCoolingDown && timeSinceLast < tenMinutes) {
-            const remain = tenMinutes - timeSinceLast;
-            const rMin = Math.floor(remain / 60000);
-            const rSec = Math.floor((remain % 60000) / 1000);
-            timeStr += ` | 次の探索まで ${rMin}:${String(rSec).padStart(2, '0')}`;
+        const diff = now - (this.state.unlockTimestamps.last_exploration || 0);
+        const elapsed = now - (this.state.startTime || now);
+        let timeStr = `経過: ${Math.floor(elapsed/60000)}:${String(Math.floor((elapsed%60000)/1000)).padStart(2,'0')}`;
+        if (this.state.currentCoolingDown && diff < 600000) {
+            const rem = 600000 - diff;
+            timeStr += ` | 次の探索まで ${Math.floor(rem/60000)}:${String(Math.floor((rem%60000)/1000)).padStart(2,'0')}`;
         }
         timerElement.innerText = timeStr;
     }
 
     checkLocationUnlocks() {
         const now = Date.now();
-        const lastTime = this.state.unlockTimestamps.last_exploration || 0;
-        if (this.state.currentCoolingDown && (now - lastTime >= 10 * 60 * 1000)) {
-            this.state.currentCoolingDown = false; 
-            this.saveState();
-            alert("新たな場所を探索できます。");
+        if (this.state.currentCoolingDown && (now - this.state.unlockTimestamps.last_exploration >= 600000)) {
+            this.state.currentCoolingDown = false; this.saveState();
         }
         this.updateLocationButtonsUI();
     }
 
     exploreLocation(num) {
-        if (this.state.visitedLocations.includes(num)) {
-            window.open(`image/${num}.pdf`, '_blank');
-            return;
-        }
-        const now = Date.now();
-        if (this.state.currentCoolingDown && (now - this.state.unlockTimestamps.last_exploration < 10 * 60 * 1000)) {
-            alert("まだ準備ができていません。");
-            return;
-        }
+        if (this.state.visitedLocations.includes(num)) { window.open(`image/${num}.pdf`, '_blank'); return; }
+        if (this.state.currentCoolingDown) { alert("クールタイム中です。"); return; }
         if (confirm(`場所 ${num} を調べますか？`)) {
             this.state.visitedLocations.push(num);
             this.state.currentCoolingDown = true;
-            this.state.unlockTimestamps.last_exploration = now;
+            this.state.unlockTimestamps.last_exploration = Date.now();
             this.saveState();
-            this.updateLocationButtonsUI();
             window.open(`image/${num}.pdf`, '_blank');
         }
     }
 
     updateLocationButtonsUI() {
-        const locationNames = { 6: "屋敷の中1", 7: "屋敷の中2", 8: "書斎1", 9: "書斎2", 10: "書斎3" };
         for (let i = 6; i <= 10; i++) {
             const btn = document.getElementById(`loc-btn-${i}`);
             if (!btn) continue;
-            const isVisited = this.state.visitedLocations.includes(i);
-            btn.disabled = (!isVisited && this.state.currentCoolingDown);
-            btn.innerText = isVisited ? `[閲覧可] ${locationNames[i]}` : locationNames[i];
+            const isV = this.state.visitedLocations.includes(i);
+            btn.disabled = (!isV && this.state.currentCoolingDown);
             btn.style.opacity = btn.disabled ? "0.5" : "1";
         }
     }
 
+    // --- キャラクター/プロンプト ---
     getCharacter(id) { return (this.scenario.characters || []).find(c => c.id === id); }
 
     renderCharacterList() {
-        if (!this.scenario || !this.scenario.characters) return;
         const list = document.getElementById('character-list');
         list.innerHTML = '';
         this.scenario.characters.forEach(char => {
@@ -329,34 +254,31 @@ class Game {
         logContainer.innerHTML = '';
         const history = (this.state.history || {})[this.currentCharacterId] || [];
         history.forEach(msg => {
-            if (msg.role === 'model') {
-                this.renderSingleMessage('model', msg.displayOuter, msg.displayInner);
-            } else {
-                this.renderSingleMessage(msg.role, msg.text);
-            }
+            if (msg.role === 'model') this.renderSingleMessage('model', msg.displayOuter, msg.displayInner);
+            else this.renderSingleMessage(msg.role, msg.text);
         });
         logContainer.scrollTop = logContainer.scrollHeight;
     }
 
     constructSystemPrompt(char) {
-        const commonKnowledge = `【現場の事実】被害者は後頭部殴打で死亡。コーヒー2客あり（晴二はアレルギーで飲めない）。窓は外から割られているが鍵は閉まっていた。`.trim();
-        const knownEvidencesList = (this.state.evidences || []).map(eid => {
+        const commonKnowledge = `【共通認識】被害者は後頭部殴打で死亡。机にコーヒー2客（長男・晴二はアレルギーで絶対飲めない）。窓は外から割られているが玄関は施錠。タバコの臭い。`.trim();
+        const knownEvidences = (this.state.evidences || []).map(eid => {
             const e = (this.scenario.evidences || []).find(ev => ev.id === eid);
             return e ? `- ${e.name}: ${e.description}` : null;
         }).filter(Boolean).join("\n");
-        const evidenceReactions = JSON.stringify(char.evidence_reactions || []);
-        return `あなたは「${char.name}」です。
+        
+        return `あなたは「${char.name}」(${char.age}歳)です。
+        【家族】${JSON.stringify(char.family_relation)}
+        【性格】${char.personality} / 口調: ${char.talk_style}
         【事実】${commonKnowledge}
-        【性格/口調】${char.talk_style}
-        【秘密】${JSON.stringify(char.secrets)}
-        【反応設定】${evidenceReactions}
-        【持っている証拠】${knownEvidencesList}
-        【指針】疑われたら他人の情報を出しなさい。応答は outer_voice と inner_voice（内心のヒント）に分けて。`.trim();
+        【証拠への反応】${JSON.stringify(char.evidence_reactions)}
+        【既知の証拠】${knownEvidences}
+        【指針】秘密を隠すが、追及されたら他人の怪しい点を暴露して逃げろ。
+        【形式】outer_voice:発言 / inner_voice:内心（次に疑うべき相手のヒント）`.trim();
     }
 
     updateAttributesUI() {
         const list = document.getElementById('evidence-list');
-        if (!list || !this.scenario) return;
         list.innerHTML = '';
         this.state.evidences.forEach(eid => {
             const ev = (this.scenario.evidences || []).find(e => e.id === eid);
@@ -372,47 +294,53 @@ class Game {
     async loadScenario(path) {
         const res = await fetch(path);
         this.scenario = await res.json();
-        if (this.scenario.characters) {
-            const charPromises = this.scenario.characters.map(async (cp) => {
-                const cRes = await fetch(cp.startsWith('.') ? cp : `./${cp}`);
-                return await cRes.json();
-            });
-            this.scenario.characters = await Promise.all(charPromises);
-        }
-        if (this.scenario.case) {
-            document.getElementById('case-title').innerText = this.scenario.case.title;
-            document.getElementById('case-outline').innerText = this.scenario.case.outline;
-        }
+        const charPromises = this.scenario.characters.map(async (cp) => {
+            const cRes = await fetch(cp.startsWith('.') ? cp : `./${cp}`);
+            return await cRes.json();
+        });
+        this.scenario.characters = await Promise.all(charPromises);
+        document.getElementById('case-title').innerText = this.scenario.case.title;
+        document.getElementById('case-outline').innerText = this.scenario.case.outline;
     }
 
+    // --- 告発/リセット ---
     startAccusation() {
-        const container = document.querySelector('#main-menu .content');
-        this.originalMenuHTML = container.innerHTML;
-        container.innerHTML = `<h2 class="section-title">犯人は誰？</h2><div id="culprit-selection-list"></div><button onclick="game.cancelAccusation()">やめる</button>`;
-        const list = document.getElementById('culprit-selection-list');
+        const menu = document.querySelector('#main-menu .content');
+        this.originalMenuHTML = menu.innerHTML;
+        menu.innerHTML = `<h2 class="section-title">犯人は誰？</h2><div id="culprit-selection-list"></div><button class="action-btn" onclick="game.cancelAccusation()" style="background:#555; width:100%; color:white; padding:10px;">やめる</button>`;
         this.scenario.characters.forEach(char => {
             const div = document.createElement('div');
             div.className = 'character-card';
-            div.innerHTML = `<span>${char.name}</span><button onclick="game.executeAccusation('${char.id}', '${char.name}')">指摘</button>`;
-            list.appendChild(div);
+            div.innerHTML = `<span>${char.name}</span><button onclick="game.executeAccusation('${char.id}', '${char.name}')">告発</button>`;
+            document.getElementById('culprit-selection-list').appendChild(div);
         });
     }
 
     cancelAccusation() {
-        const container = document.querySelector('#main-menu .content');
-        container.innerHTML = this.originalMenuHTML;
-        this.renderCharacterList();
-        this.updateAttributesUI();
+        document.querySelector('#main-menu .content').innerHTML = this.originalMenuHTML;
+        this.renderCharacterList(); this.updateAttributesUI(); this.addControlButtons();
     }
 
     executeAccusation(charId, charName) {
-        if (!confirm(`${charName}を告発しますか？`)) return;
-        let resultData = { title: "BAD END", text: "間違っています...", isCorrect: false };
-        if (charId === "renzo") {
-            resultData = { title: "TRUE END", text: "私が犯人です...", isCorrect: true };
-        }
-        sessionStorage.setItem('game_result', JSON.stringify(resultData));
+        if (!confirm(`${charName}を告発？`)) return;
+        let res = { title: "BAD END", text: "間違いです。", isCorrect: false };
+        if (charId === "renzo") res = { title: "TRUE END", text: "私がやりました。", isCorrect: true };
+        sessionStorage.setItem('game_result', JSON.stringify(res));
         window.location.href = 'epilogue.html';
+    }
+
+    resetGame() { if (confirm("リセット？")) { localStorage.clear(); location.reload(); } }
+
+    addControlButtons() {
+        const menu = document.querySelector('#main-menu .content');
+        if (document.getElementById('game-controls')) return;
+        const div = document.createElement('div');
+        div.id = 'game-controls';
+        div.innerHTML = `
+            <button onclick="game.startAccusation()" style="display:block; width:90%; margin:20px auto; padding:12px; background:#d32f2f; color:white; border-radius:5px; font-weight:bold;">👉 犯人を指名する</button>
+            <button onclick="game.resetGame()" style="display:block; width:90%; margin:10px auto; padding:10px; background:#555; color:white; border-radius:5px;">🔄 最初からやり直す</button>
+        `;
+        menu.appendChild(div);
     }
 
     showError(msg) { alert(msg); }
@@ -420,9 +348,8 @@ class Game {
 
 const game = new Game();
 window.game = game;
-
-document.addEventListener('DOMContentLoaded', () => {
-    game.init();
+document.addEventListener('DOMContentLoaded', () => { 
+    game.init().then(() => game.addControlButtons());
     document.getElementById('back-btn').onclick = () => game.closeInterrogation();
     document.getElementById('send-btn').onclick = () => game.sendMessage();
 });
