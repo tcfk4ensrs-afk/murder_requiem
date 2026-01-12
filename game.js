@@ -401,15 +401,32 @@ inner_voice: キャラとしての内心。プレイヤーに「どの証拠が�
     }
 
     checkEvidenceUnlock(userText, aiText) {
-        if (!this.scenario || !this.scenario.evidences) return;
-        this.scenario.evidences.forEach(ev => {
-            if (this.state.evidences.includes(ev.id)) return;
-            if (userText.includes(ev.unlock_condition)) {
-                this.addEvidence(ev.id);
-                alert(`【新証拠】\n${ev.name}`);
-            }
-        });
-    }
+    if (!this.scenario || !this.scenario.evidences) return;
+
+    this.scenario.evidences.forEach(ev => {
+        // すでに持っている証拠はスキップ
+        if (this.state.evidences.includes(ev.id)) return;
+
+        // unlock_conditionを「キャラID」と「キーワード」に分割 (例 "yotsuba:一海姉さん")
+        const conditionParts = ev.unlock_condition.split(':');
+        if (conditionParts.length !== 2) return;
+
+        const targetCharId = conditionParts[0];
+        const keyword = conditionParts[1];
+
+        // 1. 現在話しているキャラが、証拠を出すべきキャラか
+        // 2. AIの発言(aiText)にキーワードが含まれているか
+        if (this.currentCharacterId === targetCharId && aiText.includes(keyword)) {
+            this.addEvidence(ev.id);
+            
+            // 演出：少し遅らせてアラートを出すと「会話から気づいた」感が出ます
+            setTimeout(() => {
+                alert(`【新証拠入手：${ev.name}】\n${this.getCharacter(targetCharId).name}の発言から新たな事実が判明しました！\n\n「${ev.description}」`);
+                this.updateAttributesUI();
+            }, 500);
+        }
+    });
+}
 
     startAccusation() {
         const container = document.querySelector('#main-menu .content');
@@ -489,6 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
+
 
 
 
