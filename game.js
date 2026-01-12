@@ -153,20 +153,35 @@ class Game {
         setTimeout(() => { if (cutin.parentNode) cutin.remove(); }, 2500);
     }
 
-    checkEvidenceUnlock(userText, aiText) {
-        if (!this.scenario || !this.scenario.evidences) return;
-        this.scenario.evidences.forEach(ev => {
-            if (this.state.evidences.includes(ev.id) || ev.unlock_condition === "start") return;
-            const parts = ev.unlock_condition.split(':');
-            if (parts.length === 2 && this.currentCharacterId === parts[0] && aiText.includes(parts[1])) {
+   checkEvidenceUnlock(userText, aiText) {
+    if (!this.scenario || !this.scenario.evidences) return;
+
+    this.scenario.evidences.forEach(ev => {
+        // すでに解放済み、または初期証拠はスルー
+        if (this.state.evidences.includes(ev.id) || ev.unlock_condition === "start") return;
+
+        const [targetCharId, rawKeyword] = ev.unlock_condition.split(':');
+        
+        // 判定条件: 
+        // 1. 今の話し相手が正しいか
+        // 2. AIの発言(aiText)にキーワードが含まれているか
+        if (this.currentCharacterId === targetCharId) {
+            const keywords = rawKeyword.split('|'); // "鍵|閉め|施錠" のように複数指定可能に
+            const isUnlocked = keywords.some(k => aiText.includes(k));
+
+            if (isUnlocked) {
                 this.addEvidence(ev.id);
+                const charName = this.getCharacter(targetCharId).name;
+                
+                // 1秒後にシステムメッセージを表示（カットインとの重なり回避）
                 setTimeout(() => {
-                    this.appendMessage('system', `【分析完了】${this.getCharacter(parts[0]).name}の発言から証拠「${ev.name}」を入手。`);
+                    this.appendMessage('system', `【証拠獲得】${charName}の証言から「${ev.name}」の情報が紐解かれました。`);
                     this.updateAttributesUI();
-                }, 600);
+                }, 1000);
             }
-        });
-    }
+        }
+    });
+}
 
     // --- UI・探索・タイマー ---
     startGlobalTimer() {
@@ -263,44 +278,48 @@ class Game {
     }
 
     constructSystemPrompt(char) {
-        const commonKnowledge = `
-【現場の客観的事実】
+    const commonKnowledge = `
+【現場の客観的事実：書き換え不可】
 - 被害者は書斎で倒れており、死因は後頭部への殴打（凶器は血の付いた灰皿）。
-- 現場には2客のコーヒー。1杯は手付かず、1杯は飲みかけ。
-- 窓は外から割られているが、玄関の鍵は朝まで施錠されていた。
-- 昨晩の屋敷内ではタバコの臭いが漂っていた。`.trim();
+- 現場にはコーヒー2客。1客は手付かず、1客は飲みかけ。
+- 長男・晴二は重度のコーヒーアレルギー。自分から飲むことは絶対にない。
+- 窓は外から割られているが、玄関の鍵は蓮三が到着した際、施錠されていた。
+- 昨晩の屋敷内では、タバコの臭いが漂っていた。
+    `.trim();
 
-        const knownEvidences = (this.state.evidences || []).map(eid => {
-            const e = (this.scenario.evidences || []).find(ev => ev.id === eid);
-            return e ? `- ${e.name}: ${e.description}` : null;
-        }).filter(Boolean).join("\n");
-        
-        return `あなたはミステリーゲームの登場人物「${char.name}」(${char.age}歳)です。
+    const knownEvidences = (this.state.evidences || []).map(eid => {
+        const e = (this.scenario.evidences || []).find(ev => ev.id === eid);
+        return e ? `- ${e.name}: ${e.description}` : null;
+    }).filter(Boolean).join("\n");
 
-【家族関係】
-${JSON.stringify(char.family_relation)}
-長女(一海/30)、長男(晴二/29)、次男(蓮三/28)、次女(四葉/27)、三男(渓五/26)の順序と呼び方を守ってください。
+    return `
+# Role
+あなたはミステリーゲームの登場人物「${char.name}」です。他の誰でもなく、この人物になりきって思考・発言してください。
 
-【あなたの性格】
-${char.personality} / 口調: ${char.talk_style}
+# Character Profile
+- 年齢/職業: ${char.age}歳 / ${char.occupation}
+- 家族構成: 長女(一海)、長男(晴二)、次男(蓮三)、次女(四葉)、三男(渓五)。あなたは「${char.role}」です。
+- 性格/口調: ${char.personality} / ${char.talk_style}
 
-【絶対的事実】
-${commonKnowledge}
+# Constraints (重要)
+1. **秘密の保持**: あなたの秘密「${JSON.stringify(char.secrets)}」は、適切な証拠を突きつけられない限り絶対に認めてはいけません。
+2. **証拠への反応**: 以下の証拠反応定義に合致する指摘を受けた場合のみ、動揺を見せて白状してください。
+   ${JSON.stringify(char.evidence_reactions)}
+3. **他者への転嫁**: 自分が疑われたり、答えに詰まったら、容疑を逸らすために「他の家族の不審な動き」を必ず一つ口にしてください。
+4. **事実の遵守**: 以下の共通事実に矛盾する嘘をついてはいけません。
+   ${commonKnowledge}
 
-【証拠への反応】
-プレイヤーから以下の証拠を指摘されたら隠し事を認めてください:
-${JSON.stringify(char.evidence_reactions)}
-
-【判明している証拠】
+# 現在の捜査状況
+プレイヤーが現在持っている証拠:
 ${knownEvidences}
 
-【あなたの秘密/指針】
-${JSON.stringify(char.secrets)}
-- 自分の秘密は隠すが、窮地に陥ったら「他の兄弟の不審な点」を暴露して逃げろ。
-- 応答は必ず以下の形式を守ること。
-outer_voice: キャラとしての発言。
-inner_voice: キャラとしての内心。プレイヤーへのヒントを含めること。`.trim();
-    }
+# Response Format
+必ず以下の2段構成で出力してください。これ以外の挨拶や解説は不要です。
+
+outer_voice: [キャラとしての発言。証拠を突きつけられたら動揺し、そうでなければはぐらかす。]
+inner_voice: [キャラの内心。「この証拠はマズい」「次はアイツを疑わせよう」など、プレイヤーへのヒント。]
+    `.trim();
+}
 
     updateAttributesUI() {
         const list = document.getElementById('evidence-list');
@@ -383,3 +402,4 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('back-btn').onclick = () => game.closeInterrogation();
     document.getElementById('send-btn').onclick = () => game.sendMessage();
 });
+
