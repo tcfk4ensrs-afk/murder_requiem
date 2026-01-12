@@ -4,6 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ようこそ</title>
+  <div class="difficulty-selector">
+    <span class="section-title">調査モード</span>
+    <div class="mode-buttons">
+        <button id="mode-detective" class="mode-btn" onclick="game.setDifficulty('detective')">探偵モード</button>
+        <button id="mode-master" class="mode-btn" onclick="game.setDifficulty('master')">名探偵モード</button>
+    </div>
+    <p id="mode-description" style="font-size: 0.8rem; color: #888; margin-top: 5px;">
+        ※探偵モード：相手の発言のみで推理（難）<br>
+        ※名探偵モード：相手の内心を読み取る（易）
+    </p>
+</div>
   <style>
     :root {
       --bg-color: #1a1a1a;
