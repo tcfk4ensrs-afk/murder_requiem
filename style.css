@@ -277,5 +277,75 @@ p#case-outline {
 
 #send-btn:disabled {
     background-color: #444;
+    /* --- 証拠発見カットイン (CSS末尾に追加) --- */
+.evidence-cutin {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.95);
+    color: #fff;
+    width: 100%; /* 横いっぱいに広がる帯 */
+    padding: 30px 0;
+    border-top: 2px solid #d32f2f;
+    border-bottom: 2px solid #d32f2f;
+    z-index: 10000;
+    text-align: center;
+    animation: cutInAnim 2.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    pointer-events: none;
+    box-shadow: 0 0 40px rgba(211, 47, 47, 0.6);
+}
+
+.evidence-cutin h2 {
+    color: #d32f2f;
+    margin: 0;
+    font-size: 0.9rem;
+    letter-spacing: 0.5rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.evidence-cutin p {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin: 10px 0 0 0;
+    color: #ffffff;
+    text-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
+
+@keyframes cutInAnim {
+    0% { opacity: 0; width: 0%; transform: translate(-50%, -50%) scaleX(0); }
+    15% { opacity: 1; width: 100%; transform: translate(-50%, -50%) scaleX(1); }
+    85% { opacity: 1; width: 100%; transform: translate(-50%, -50%) scaleX(1); }
+    100% { opacity: 0; width: 100%; transform: translate(-50%, -50%) scaleX(1.1); }
+}
+
+/* システムメッセージ用のスタイル (ログ用) */
+.message.system {
+    align-self: center;
+    background-color: transparent;
+    color: #d32f2f;
+    font-size: 0.8rem;
+    font-weight: bold;
+    border: 1px solid #d32f2f;
+    padding: 5px 15px;
+    border-radius: 4px;
+    margin: 10px 0;
+    text-align: center;
+    max-width: 90%;
+}
+
+/* クールタイムやタイマーのUI改善 */
+#elapsed-time {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.8rem;
+    color: var(--accent-color);
+    background: #222;
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    display: inline-block;
+}
     cursor: not-allowed;
 }
+
