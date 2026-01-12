@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Murder Mystery AI</title>
+    <title>Murder Mystery AI - 捜査本部</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -13,7 +13,7 @@
         <div id="main-menu">
             <header>
                 <h1 id="case-title">Loading...</h1>
-                <p id="case-outline">---</p>
+                <p id="case-outline">シナリオを読み込み中...</p>
             </header>
 
             <div id="timer-display" style="text-align: center; background: #222; padding: 10px; margin: 10px; border-radius: 5px; border: 1px solid var(--accent-color);">
@@ -26,31 +26,31 @@
                 <div id="character-list">
                     </div>
 
-                <h2 class="section-title">探索場所 (1回のみ選択可能)</h2>
+                <h2 class="section-title">探索場所 (10分に1回探索可能)</h2>
                 <div id="location-list" class="location-grid">
                     <button id="loc-btn-6" class="loc-btn" onclick="game.exploreLocation(6)">屋敷の中1(母の寝室・トイレ・ピアノ室)</button>
-                    <button id="loc-btn-7" class="loc-btn" onclick="game.exploreLocation(7)" disabled>屋敷の中2(母の寝室・倉庫)</button>
-                    <button id="loc-btn-8" class="loc-btn" onclick="game.exploreLocation(8)" disabled>書斎1</button>
-                    <button id="loc-btn-9" class="loc-btn" onclick="game.exploreLocation(9)" disabled>書斎2</button>
-                    <button id="loc-btn-10" class="loc-btn" onclick="game.exploreLocation(10)" disabled>書斎3</button>
+                    <button id="loc-btn-7" class="loc-btn" onclick="game.exploreLocation(7)">屋敷の中2(母の寝室・倉庫)</button>
+                    <button id="loc-btn-8" class="loc-btn" onclick="game.exploreLocation(8)">書斎1</button>
+                    <button id="loc-btn-9" class="loc-btn" onclick="game.exploreLocation(9)">書斎2</button>
+                    <button id="loc-btn-10" class="loc-btn" onclick="game.exploreLocation(10)">書斎3</button>
                 </div>
 
                 <h2 class="section-title">所持証拠・情報</h2>
                 <div id="evidence-list">
                     <p style="color:#666; font-size:0.9rem; padding:10px;">(まだ証拠はありません)</p>
                 </div>
-            </div>
 
-            <div style="padding: 20px; text-align: center; color: #666; font-size: 0.8rem;">
-                Config Warning: Set API Key in config.js
+                <div id="action-area" style="margin-top: 30px; padding-bottom: 50px;">
+                    </div>
             </div>
         </div>
 
         <div id="interrogation-room" style="display:none;">
             <header id="room-header">
-                <button id="back-btn">←</button>
+                <button id="back-btn">← 戻る</button>
                 <span id="target-name">Unknown</span>
-                <div style="width: 40px;"></div> </header>
+                <div style="width: 40px;"></div>
+            </header>
 
             <div id="chat-log">
                 </div>
@@ -61,14 +61,9 @@
             </div>
         </div>
 
-        <div id="error-log"
-            style="display:none; margin:10px; padding:10px; background:#ffebee; border:1px solid #c62828; color:#c62828; font-size:0.8rem; white-space:pre-wrap;">
-        </div>
+        <div id="error-log" style="display:none; margin:10px; padding:10px; background:#ffebee; border:1px solid #c62828; color:#c62828; font-size:0.8rem; white-space:pre-wrap;"></div>
     </div>
 
     <script type="module" src="game.js"></script>
 </body>
-
 </html>
-
-
