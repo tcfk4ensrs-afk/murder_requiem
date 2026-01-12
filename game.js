@@ -320,30 +320,52 @@ class Game {
     }
 
     constructSystemPrompt(char) {
-    // 1. 現在プレイヤーが持っている証拠品の詳細リストを作成
-    const knownEvidencesList = (this.state.evidences || []).map(eid => {
-        const e = (this.scenario.evidences || []).find(ev => ev.id === eid);
-        return e ? `- ${e.name}: ${e.description}` : null;
-    }).filter(Boolean).join("\n");
+        // 1. 全キャラ共通の「現場の客観的事実」を定義
+        // これにより、AIがアレルギー設定などを無視して矛盾した嘘をつくのを防ぎます
+        const commonKnowledge = `
+【現場の客観的事実（全キャラ共通認識）】
+- 被害者は書斎で倒れており、死因は後頭部への一撃（凶器は血の付いた重厚な灰皿）。
+- 現場（書斎）の机には2客のコーヒーがあった。1杯は手付かず、1杯は飲みかけ。
+- 長男・晴二は重度のコーヒーアレルギーであり、コーヒーを飲むことは物理的に不可能である。
+- 書斎の窓は外から割られているが、玄関の鍵は蓮三が到着した際、施錠されていた。
+- 昨晩の屋敷内では、タバコの臭いが漂っていた。
+        `.trim();
 
-    // 2. キャラクター固有の「証拠品に対する反応設定」を取得 (JSONに追加予定の項目)
-    const evidenceReactions = JSON.stringify(char.evidence_reactions || {});
+        // 2. 現在プレイヤーが持っている証拠品の詳細リストを作成
+        const knownEvidencesList = (this.state.evidences || []).map(eid => {
+            const e = (this.scenario.evidences || []).find(ev => ev.id === eid);
+            return e ? `- ${e.name}: ${e.description}` : null;
+        }).filter(Boolean).join("\n");
 
-    return `
+        // 3. キャラクター固有の「証拠品に対する反応設定」を取得
+        const evidenceReactions = JSON.stringify(char.evidence_reactions || []);
+
+        // 4. 家族関係（性別・順序）の補強
+        // JSONにfamily_relationがある場合はそれを使用し、ない場合はroleを使用
+        const familyContext = char.family_relation ? 
+            `あなたの家族関係: ${JSON.stringify(char.family_relation)}` : 
+            `あなたの役割: ${char.role}`;
+
+        return `
 あなたはミステリーゲームの登場人物「${char.name}」として振る舞ってください。
-以下の設定と【証拠品提示ルール】を厳守すること。
+以下の【絶対的な真実】と【証拠品提示ルール】を厳守すること。
 
-# キャラクター設定
+### 1. 【絶対的な真実】（全キャラ共通の前提知識）
+${commonKnowledge}
+
+### 2. キャラクター設定
+名前: ${char.name} / 年齢: ${char.age}歳 / 職業: ${char.occupation}
+${familyContext}
 性格: ${Array.isArray(char.personality) ? char.personality.join("、") : char.personality}
 口調: ${char.talk_style}
-役割: ${char.role}
 
-# 秘密と禁止事項
-- あなたには以下の秘密があります: ${JSON.stringify(char.secrets)}
-- 以下の内容は絶対に自分から話さないでください: ${JSON.stringify(char.forbidden_reveals)}
+### 3. 秘密と禁止事項
+- 秘密（隠し事）: ${JSON.stringify(char.secrets)}
+- 絶対に自白しない内容: ${JSON.stringify(char.forbidden_reveals)}
 
-# 【最優先】証拠品提示ルール
-プレイヤーが以下の「現在判明している証拠」を突きつけてきた場合、あなたは隠し通せなくなります。
+### 4. 【最優先】証拠品提示ルール
+プレイヤーが以下の「現在判明している証拠」を突きつけてきた場合、あなたは【証拠品への反応定義】に従って、言い逃れをやめ、情報を開示しなければなりません。
+
 【現在判明している証拠】
 ${knownEvidencesList}
 
@@ -352,14 +374,14 @@ ${evidenceReactions}
 
 ### 応答の指針
 1. 証拠品を提示されていない段階では、秘密を隠し、嘘やはぐらかしで対応してください。
-2. プレイヤーが「現在判明している証拠」の名前を出し、あなたの矛盾を突いた場合、上記の【証拠品への反応定義】に従って、動揺を見せたり、一部の真実を白状してください。
-3. 証拠品が揃っていないのに核心を話しすぎないでください。
+2. 適切な証拠を突きつけられたら、動揺を見せ、一部の真実を白状してください。
+3. 設定にない勝手な嘘を捏造しないでください。
 
 ### 応答形式
-outer_voice: キャラとしての発言。証拠を突きつけられたら動揺（${char.talk_style}）を見せること。
-inner_voice: キャラとしての内心。プレイヤーに「どの証拠が致命的だったか」や「次に疑わしい人物」のヒントを独り言として漏らしてください。
+outer_voice: キャラとしての発言。証拠を突きつけられたら動揺を見せること。
+inner_voice: キャラとしての内心。プレイヤーに「どの証拠が効いたか」や「他の兄弟への疑念」のヒントを独り言として漏らしてください。
 `.trim();
-}
+    }
 
     updateAttributesUI() {
         this.updateLocationButtonsUI();
@@ -467,5 +489,6 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
+
 
 
