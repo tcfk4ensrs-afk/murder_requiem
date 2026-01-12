@@ -39,6 +39,12 @@
     "description": "長男・晴二は重度のコーヒーアレルギー。自分からコーヒーを飲むことは絶対にない。",
     "unlock_condition": "seiji:アレルギー"
   },
+    {
+  "id": "trunk_passcode",
+  "name": "トランクの暗証番号",
+  "description": "一海が母から託された番号『13542』。母が愛したピアノの指番号だという。",
+  "unlock_condition": "kazumi:13542"
+},
   {
     "id": "pierce_fragment",
     "name": "ピアスの破片",
@@ -83,6 +89,7 @@
   }
   ]
 }
+
 
 
 
