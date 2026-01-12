@@ -19,7 +19,7 @@ class Game {
         this.timerInterval = null;
     }
 
-    // --- 初期化 ---
+    // --- 初期化ロジック ---
     async init() {
         try {
             console.log("Game initialising...");
@@ -36,7 +36,7 @@ class Game {
         }
     }
 
-    // --- モード管理 ---
+    // --- モード管理（難易度） ---
     setDifficulty(mode) {
         this.state.difficulty = mode;
         this.saveState();
@@ -116,7 +116,7 @@ class Game {
         logContainer.scrollTop = logContainer.scrollHeight;
     }
 
-    // --- 証拠・探索ロジック ---
+    // --- シナリオ・証拠・探索 ---
     loadState() {
         const saved = localStorage.getItem('mystery_game_state_v1');
         if (saved) {
@@ -168,7 +168,7 @@ class Game {
         });
     }
 
-    // --- UI/タイマー ---
+    // --- UI・探索・タイマー ---
     startGlobalTimer() {
         if (this.timerInterval) clearInterval(this.timerInterval);
         this.timerInterval = setInterval(() => { this.updateTimerDisplay(); this.checkLocationUnlocks(); }, 1000);
@@ -209,16 +209,18 @@ class Game {
     }
 
     updateLocationButtonsUI() {
+        const locationNames = { 6: "屋敷の中1", 7: "屋敷の中2", 8: "書斎1", 9: "書斎2", 10: "書斎3" };
         for (let i = 6; i <= 10; i++) {
             const btn = document.getElementById(`loc-btn-${i}`);
             if (!btn) continue;
             const isV = this.state.visitedLocations.includes(i);
             btn.disabled = (!isV && this.state.currentCoolingDown);
+            btn.innerText = isV ? `[閲覧可] ${locationNames[i]}` : locationNames[i];
             btn.style.opacity = btn.disabled ? "0.5" : "1";
         }
     }
 
-    // --- キャラクター/プロンプト ---
+    // --- キャラクター・システムプロンプト ---
     getCharacter(id) { return (this.scenario.characters || []).find(c => c.id === id); }
 
     renderCharacterList() {
@@ -261,24 +263,48 @@ class Game {
     }
 
     constructSystemPrompt(char) {
-        const commonKnowledge = `【共通認識】被害者は後頭部殴打で死亡。机にコーヒー2客（長男・晴二はアレルギーで絶対飲めない）。窓は外から割られているが玄関は施錠。タバコの臭い。`.trim();
+        const commonKnowledge = `
+【現場の客観的事実】
+- 被害者は書斎で倒れており、死因は後頭部への殴打（凶器は血の付いた灰皿）。
+- 現場には2客のコーヒー。1杯は手付かず、1杯は飲みかけ。
+- 窓は外から割られているが、玄関の鍵は朝まで施錠されていた。
+- 昨晩の屋敷内ではタバコの臭いが漂っていた。`.trim();
+
         const knownEvidences = (this.state.evidences || []).map(eid => {
             const e = (this.scenario.evidences || []).find(ev => ev.id === eid);
             return e ? `- ${e.name}: ${e.description}` : null;
         }).filter(Boolean).join("\n");
         
-        return `あなたは「${char.name}」(${char.age}歳)です。
-        【家族】${JSON.stringify(char.family_relation)}
-        【性格】${char.personality} / 口調: ${char.talk_style}
-        【事実】${commonKnowledge}
-        【証拠への反応】${JSON.stringify(char.evidence_reactions)}
-        【既知の証拠】${knownEvidences}
-        【指針】秘密を隠すが、追及されたら他人の怪しい点を暴露して逃げろ。
-        【形式】outer_voice:発言 / inner_voice:内心（次に疑うべき相手のヒント）`.trim();
+        return `あなたはミステリーゲームの登場人物「${char.name}」(${char.age}歳)です。
+
+【家族関係】
+${JSON.stringify(char.family_relation)}
+長女(一海/30)、長男(晴二/29)、次男(蓮三/28)、次女(四葉/27)、三男(渓五/26)の順序と呼び方を守ってください。
+
+【あなたの性格】
+${char.personality} / 口調: ${char.talk_style}
+
+【絶対的事実】
+${commonKnowledge}
+
+【証拠への反応】
+プレイヤーから以下の証拠を指摘されたら隠し事を認めてください:
+${JSON.stringify(char.evidence_reactions)}
+
+【判明している証拠】
+${knownEvidences}
+
+【あなたの秘密/指針】
+${JSON.stringify(char.secrets)}
+- 自分の秘密は隠すが、窮地に陥ったら「他の兄弟の不審な点」を暴露して逃げろ。
+- 応答は必ず以下の形式を守ること。
+outer_voice: キャラとしての発言。
+inner_voice: キャラとしての内心。プレイヤーへのヒントを含めること。`.trim();
     }
 
     updateAttributesUI() {
         const list = document.getElementById('evidence-list');
+        if (!list) return;
         list.innerHTML = '';
         this.state.evidences.forEach(eid => {
             const ev = (this.scenario.evidences || []).find(e => e.id === eid);
@@ -286,6 +312,7 @@ class Game {
                 const div = document.createElement('div');
                 div.className = 'evidence-item';
                 div.innerHTML = `<strong>${ev.name}</strong><br><small>${ev.description}</small>`;
+                div.style.cssText = "padding:8px; border-bottom:1px solid #444; font-size:0.9rem;";
                 list.appendChild(div);
             }
         });
@@ -303,15 +330,16 @@ class Game {
         document.getElementById('case-outline').innerText = this.scenario.case.outline;
     }
 
-    // --- 告発/リセット ---
+    // --- 告発・ボタン制御 ---
     startAccusation() {
         const menu = document.querySelector('#main-menu .content');
         this.originalMenuHTML = menu.innerHTML;
-        menu.innerHTML = `<h2 class="section-title">犯人は誰？</h2><div id="culprit-selection-list"></div><button class="action-btn" onclick="game.cancelAccusation()" style="background:#555; width:100%; color:white; padding:10px;">やめる</button>`;
+        menu.innerHTML = `<h2 class="section-title">真犯人を指名してください</h2><div id="culprit-selection-list"></div><button onclick="game.cancelAccusation()" style="background:#555; width:100%; color:white; padding:12px; margin-top:10px; border-radius:5px; border:none;">キャンセル</button>`;
         this.scenario.characters.forEach(char => {
             const div = document.createElement('div');
             div.className = 'character-card';
-            div.innerHTML = `<span>${char.name}</span><button onclick="game.executeAccusation('${char.id}', '${char.name}')">告発</button>`;
+            div.style.marginTop = "10px";
+            div.innerHTML = `<span>👤 ${char.name}</span><button onclick="game.executeAccusation('${char.id}', '${char.name}')" style="margin-left:10px; padding:5px 10px; background:var(--accent-color); border:none; border-radius:3px; cursor:pointer;">指摘</button>`;
             document.getElementById('culprit-selection-list').appendChild(div);
         });
     }
@@ -322,14 +350,16 @@ class Game {
     }
 
     executeAccusation(charId, charName) {
-        if (!confirm(`${charName}を告発？`)) return;
-        let res = { title: "BAD END", text: "間違いです。", isCorrect: false };
-        if (charId === "renzo") res = { title: "TRUE END", text: "私がやりました。", isCorrect: true };
+        if (!confirm(`${charName}を真犯人として告発しますか？`)) return;
+        let res = { title: "BAD END - 誤認逮捕", text: "あなたの推理は間違っていた...", isCorrect: false };
+        if (charId === "renzo") {
+            res = { title: "TRUE END - 真実", text: "「私が……私がやりました……」蓮三は膝を突き、すべてを語り始めた。", isCorrect: true };
+        }
         sessionStorage.setItem('game_result', JSON.stringify(res));
         window.location.href = 'epilogue.html';
     }
 
-    resetGame() { if (confirm("リセット？")) { localStorage.clear(); location.reload(); } }
+    resetGame() { if (confirm("データをリセットしますか？")) { localStorage.clear(); location.reload(); } }
 
     addControlButtons() {
         const menu = document.querySelector('#main-menu .content');
@@ -337,8 +367,8 @@ class Game {
         const div = document.createElement('div');
         div.id = 'game-controls';
         div.innerHTML = `
-            <button onclick="game.startAccusation()" style="display:block; width:90%; margin:20px auto; padding:12px; background:#d32f2f; color:white; border-radius:5px; font-weight:bold;">👉 犯人を指名する</button>
-            <button onclick="game.resetGame()" style="display:block; width:90%; margin:10px auto; padding:10px; background:#555; color:white; border-radius:5px;">🔄 最初からやり直す</button>
+            <button onclick="game.startAccusation()" style="display:block; width:90%; margin:30px auto 10px; padding:15px; background:#d32f2f; color:white; border-radius:5px; font-weight:bold; border:none; cursor:pointer;">👉 犯人を指名する</button>
+            <button onclick="game.resetGame()" style="display:block; width:90%; margin:10px auto; padding:10px; background:#555; color:white; border-radius:5px; border:none; cursor:pointer;">🔄 最初からやり直す</button>
         `;
         menu.appendChild(div);
     }
