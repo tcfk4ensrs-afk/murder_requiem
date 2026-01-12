@@ -1,7 +1,5 @@
 import { sendToAI } from './ai.js';
 
-import { sendToAI } from './ai.js';
-
 class Game {
     constructor() {
         this.scenario = null;
@@ -671,6 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
+
 
 
 
