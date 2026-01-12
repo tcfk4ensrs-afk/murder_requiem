@@ -13,7 +13,7 @@
       "elder_brother": "晴二（長男/29歳・レスキュー隊）",
       "younger_brother": "蓮三（次男/28歳・写真家）",
       "younger_sister": "四葉（次女/27歳・モデル）",
-      "younger_brother": "渓五（三男/26歳・バンドマン）"
+      "younger2_brother": "渓五（三男/26歳・バンドマン）"
     }
   },
   "personality": [
@@ -70,6 +70,7 @@
     }
   }
 }
+
 
 
 
