@@ -1,17 +1,20 @@
 import { sendToAI } from './ai.js';
 
+import { sendToAI } from './ai.js';
+
 class Game {
     constructor() {
         this.scenario = null;
         this.currentCharacterId = null;
         this.isAiThinking = false; 
         this.state = {
+            difficulty: 'detective', // デフォルト：探偵モード
             evidences: [],
             history: {}, 
             flags: {},
             unlockedLocations: [6, 7, 8, 9, 10], 
-            visitedLocations: [], // 修正：探索済みの場所を記録する配列
-            currentCoolingDown: false, // 修正：現在クールタイム中かどうか
+            visitedLocations: [], 
+            currentCoolingDown: false, 
             unlockTimestamps: {
                 last_exploration: 0 
             },    
@@ -20,6 +23,118 @@ class Game {
         this.timerInterval = null;
     }
 
+    // --- 難易度（モード）管理 ---
+
+    setDifficulty(mode) {
+        this.state.difficulty = mode;
+        this.saveState();
+        this.updateDifficultyUI();
+    }
+
+    updateDifficultyUI() {
+        const btnDet = document.getElementById('mode-detective');
+        const btnMas = document.getElementById('mode-master');
+        if (!btnDet || !btnMas) return;
+
+        if (this.state.difficulty === 'master') {
+            btnMas.classList.add('mode-active');
+            btnDet.classList.remove('mode-active');
+        } else {
+            btnDet.classList.add('mode-active');
+            btnMas.classList.remove('mode-active');
+        }
+    }
+
+    // --- メッセージ処理 ---
+
+    async sendMessage() {
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if (!text || this.isAiThinking) return;
+
+        this.isAiThinking = true;
+        input.value = '';
+        this.appendMessage('user', text);
+
+        const logContainer = document.getElementById('chat-log');
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'message model loading-indicator';
+        loadingDiv.innerText = '考え中...';
+        logContainer.appendChild(loadingDiv);
+        logContainer.scrollTop = logContainer.scrollHeight;
+
+        const char = this.getCharacter(this.currentCharacterId);
+        const history = (this.state.history || {})[this.currentCharacterId] || [];
+        const recentHistory = history.slice(-10);
+
+        try {
+            const responseText = await sendToAI(this.constructSystemPrompt(char), text, recentHistory);
+            loadingDiv.remove();
+            
+            // AIの応答を保存・表示（ここでモード判定が行われる）
+            this.appendMessage('model', responseText);
+            
+            // 証拠品のアンロックチェック
+            this.checkEvidenceUnlock(text, responseText);
+        } catch (e) {
+            loadingDiv.innerText = "通信エラーが発生しました。";
+            console.error(e);
+        } finally {
+            this.isAiThinking = false;
+        }
+    }
+
+    appendMessage(role, text) {
+        if (!this.state.history[this.currentCharacterId]) {
+            this.state.history[this.currentCharacterId] = [];
+        }
+
+        let displayOuter = text;
+        let displayInner = "";
+
+        // AIの応答(model)から outer_voice と inner_voice を分離
+        if (role === 'model') {
+            const outerMatch = text.match(/outer_voice[:：]\s*([\s\S]*?)(?=inner_voice|$)/i);
+            const innerMatch = text.match(/inner_voice[:：]\s*([\s\S]*)/i);
+            
+            displayOuter = outerMatch ? outerMatch[1].trim() : text;
+            displayInner = innerMatch ? innerMatch[1].trim() : "";
+        }
+
+        // 全データを履歴に保存
+        this.state.history[this.currentCharacterId].push({ 
+            role, 
+            text, 
+            displayOuter, 
+            displayInner 
+        });
+        this.saveState();
+
+        // 描画実行
+        this.renderSingleMessage(role, displayOuter, displayInner);
+    }
+
+    renderSingleMessage(role, outerText, innerText) {
+        const logContainer = document.getElementById('chat-log');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${role}`;
+
+        let html = `<div>${outerText}</div>`;
+
+        // 名探偵モード(master)の場合のみ、内心を表示する
+        if (role === 'model' && this.state.difficulty === 'master' && innerText) {
+            html += `
+                <div class="inner-thought" style="font-size: 0.8rem; color: #888; margin-top: 8px; border-top: 1px dotted #444; padding-top: 5px; font-style: italic;">
+                    （内心：${innerText}）
+                </div>`;
+        }
+
+        msgDiv.innerHTML = html;
+        logContainer.appendChild(msgDiv);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    // ... (以降、以前作成した init, loadState, checkEvidenceUnlock 等が続く)
     async init() {
         try {
             console.log("Game initialising...");
@@ -554,6 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
+
 
 
 
