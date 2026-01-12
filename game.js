@@ -142,7 +142,9 @@ class Game {
             this.loadState();
             this.renderCharacterList(); 
             this.updateAttributesUI();  
-            this.startGlobalTimer();    
+            this.startGlobalTimer();
+            this.loadState();
+            this.updateDifficultyUI();
             console.log("Game initialised successfully.");
         } catch (e) {
             console.error("Critical error during init:", e);
@@ -669,6 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
+
 
 
 
