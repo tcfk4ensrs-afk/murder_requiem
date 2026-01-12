@@ -342,11 +342,24 @@ showEvidenceCutin(evidenceName) {
     }
 
     appendMessage(role, text) {
-        if (!this.state.history[this.currentCharacterId]) this.state.history[this.currentCharacterId] = [];
-        this.state.history[this.currentCharacterId].push({ role, text });
-        this.saveState();
-        this.renderChatLog();
+    if (!this.state.history[this.currentCharacterId]) {
+        this.state.history[this.currentCharacterId] = [];
     }
+    
+    // 履歴に追加
+    this.state.history[this.currentCharacterId].push({ role, text });
+    this.saveState();
+
+    // ログを表示
+    const logContainer = document.getElementById('chat-log');
+    const msgDiv = document.createElement('div');
+    // roleが system の場合は .message.system クラスが適用される
+    msgDiv.className = `message ${role}`;
+    msgDiv.innerText = text;
+    logContainer.appendChild(msgDiv);
+    
+    logContainer.scrollTop = logContainer.scrollHeight;
+}
 
     constructSystemPrompt(char) {
     // 1. 全キャラ共通の「現場の客観的事実」を定義
@@ -429,12 +442,15 @@ inner_voice: キャラとしての内心。プレイヤーに「誰が証拠を�
         });
     }
 
-    checkEvidenceUnlock(userText, aiText) {
+   checkEvidenceUnlock(userText, aiText) {
     if (!this.scenario || !this.scenario.evidences) return;
 
     this.scenario.evidences.forEach(ev => {
         // すでに持っている証拠はスキップ
         if (this.state.evidences.includes(ev.id)) return;
+
+        // 初期証拠（start）はここでは判定しない
+        if (ev.unlock_condition === "start") return;
 
         // unlock_conditionを「キャラID」と「キーワード」に分割 (例 "yotsuba:一海姉さん")
         const conditionParts = ev.unlock_condition.split(':');
@@ -443,16 +459,19 @@ inner_voice: キャラとしての内心。プレイヤーに「誰が証拠を�
         const targetCharId = conditionParts[0];
         const keyword = conditionParts[1];
 
-        // 1. 現在話しているキャラが、証拠を出すべきキャラか
-        // 2. AIの発言(aiText)にキーワードが含まれているか
+        // 1. 現在話しているキャラが、証拠を出すべき設定のキャラか
+        // 2. AIの発言(aiText)に、フラグとなるキーワードが含まれているか
         if (this.currentCharacterId === targetCharId && aiText.includes(keyword)) {
+            
+            // 証拠を追加（この中でカットイン showEvidenceCutin が呼ばれる）
             this.addEvidence(ev.id);
             
-            // 演出：少し遅らせてアラートを出すと「会話から気づいた」感が出ます
+            // チャットログにシステムメッセージを挿入して、ログに残るようにする
+            const charName = this.getCharacter(targetCharId).name;
             setTimeout(() => {
-                alert(`【新証拠入手：${ev.name}】\n${this.getCharacter(targetCharId).name}の発言から新たな事実が判明しました！\n\n「${ev.description}」`);
+                this.appendMessage('system', `【分析完了】${charName}の発言から重要な証拠「${ev.name}」を入手しました。`);
                 this.updateAttributesUI();
-            }, 500);
+            }, 600); // カットインの表示タイミングに合わせて少し遅らせる
         }
     });
 }
@@ -535,6 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
+
 
 
 
