@@ -13,7 +13,7 @@
       "elder_sister": "一海（長女/30歳・姉）",
       "elder_brother": "晴二（長男/29歳・兄）",
       "second_brother": "蓮三（次男/28歳・兄）",
-      "younger_brother": "渓五（三男/26歳・弟）"
+      "younger2_brother": "渓五（三男/26歳・弟）"
     }
   },
   "personality": [
@@ -81,4 +81,5 @@
     }
   }
 }
+
 
