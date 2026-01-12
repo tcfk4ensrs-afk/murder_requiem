@@ -17,7 +17,7 @@
   "evidences": [
   { "id": "black_stone_butt", "name": "黒い吸い殻", "description": "『ブラック・ストーン』という銘柄の吸い殻。非常に香りが強く、父・行人の愛用品だった。", "unlock_condition": "keigo:タバコ|吸い殻|ブラック" },
   { "id": "renzo_camera_bag", "name": "カメラバッグの予備", "description": "蓮三のバッグの奥から見つかった『ブラック・ストーン』の予備。彼は吸わないと嘘をついていた。", "unlock_condition": "keigo:蓮三|隠して|持ってた" },
-  { "id": "inheritance_memo", "name": "遺産放棄の同意書", "description": "母・ユメが作成していた書類。父の曲の全権利を放棄し、社会に還元する内容。蓮三はこれに反対していた。", "unlock_condition": "kazumi:トランク|中身|遺産" }
+  { "id": "inheritance_memo", "name": "遺産放棄の同意書", "description": "母・ユメが作成していた書類。父の曲の全権利を放棄し、社会に還元する内容。蓮三はこれに反対していた。", "unlock_condition": "kazumi:トランク|中身|遺産" },
   {
     "id": "crime_scene_coffee",
     "name": "現場のコーヒー",
@@ -92,6 +92,7 @@
   }
   ]
 }
+
 
 
 
