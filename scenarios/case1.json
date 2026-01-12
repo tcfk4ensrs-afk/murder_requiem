@@ -15,19 +15,62 @@
   ],
 
   "evidences": [
-    {
-      "id": "start_note",
-      "name": "母のメモ",
-      "description": "『知らない方が幸せなこともある』と書かれたメモ。",
-      "unlock_condition": "start"
-    },
-    {
-      "id": "butler_key_hint",
-      "name": "鍵の話",
-      "description": "玄関の鍵が閉まっていたことに関する証言。",
-      "unlock_condition": "talk_butler_lies"
-    }
+  {
+    "id": "crime_scene_coffee",
+    "name": "現場のコーヒー",
+    "description": "書斎の机に2客分。1杯は手付かず、1杯は飲みかけ。晴二はアレルギーのため飲めない。",
+    "unlock_condition": "start"
+  },
+  {
+    "id": "seiji_allergy",
+    "name": "晴二のアレルギー",
+    "description": "長男・晴二は重度のコーヒーアレルギー。自分からコーヒーを飲むことは絶対にない。",
+    "unlock_condition": "start"
+  },
+  {
+    "id": "pierce_fragment",
+    "name": "ピアスの破片",
+    "description": "書斎で見つかったピアスの装飾。一海の愛用品。一海が昨晩現場にいた証拠になる。",
+    "unlock_condition": "yotsuba:一海姉さん"
+  },
+  {
+    "id": "debt_note",
+    "name": "母の貸付メモ",
+    "description": "晴二への多額の貸付記録。晴二が金に困っていた動機を裏付ける。",
+    "unlock_condition": "yotsuba:晴二兄さん"
+  },
+  {
+    "id": "threat_letter",
+    "name": "匿名の脅迫状",
+    "description": "『血がつながっていないのは誰？』。四葉が母に送ったもの。一海の出生の秘密が絡む。",
+    "unlock_condition": "keigo:四葉姉ちゃん"
+  },
+  {
+    "id": "heart_medicine",
+    "name": "母の心臓の薬",
+    "description": "母・ユメの強い薬。渓五が一週間前にこれを見て、母の体調不良を知ったきっかけ。",
+    "unlock_condition": "kazumi:渓五"
+  },
+  {
+    "id": "lens_shards",
+    "name": "特殊なガラス片",
+    "description": "カメラレンズの破片。蓮三が外部犯の仕業に見せかけるために窓を割った際のもの。",
+    "unlock_condition": "keigo:蓮三兄さん"
+  },
+  {
+    "id": "kazumi_lock_testimony",
+    "name": "一海の施錠証言",
+    "description": "昨晩21時に玄関の鍵を閉めて帰ったという確かな証言。朝に鍵が開いていた矛盾を生む。",
+    "unlock_condition": "kazumi:鍵"
+  },
+  {
+    "id": "dining_ashtray",
+    "name": "ダイニングの吸い殻",
+    "description": "四葉と渓五が昨晩ダイニングで密談していた証拠。二人の共謀を暴く。",
+    "unlock_condition": "seiji:ダイニング"
+  }
   ]
 }
+
 
 
