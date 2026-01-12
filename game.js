@@ -320,13 +320,46 @@ class Game {
     }
 
     constructSystemPrompt(char) {
-        const knownEvidences = (this.state.evidences || []).map(eid => {
-            const e = (this.scenario.evidences || []).find(ev => ev.id === eid);
-            return e ? `${e.name}` : null;
-        }).filter(Boolean).join(", ");
+    // 1. 現在プレイヤーが持っている証拠品の詳細リストを作成
+    const knownEvidencesList = (this.state.evidences || []).map(eid => {
+        const e = (this.scenario.evidences || []).find(ev => ev.id === eid);
+        return e ? `- ${e.name}: ${e.description}` : null;
+    }).filter(Boolean).join("\n");
 
-        return `Role:${char.name}. Persona:${char.personality}. Style:${char.talk_style}. FoundItems:${knownEvidences}. Reply as this character.`.trim();
-    }
+    // 2. キャラクター固有の「証拠品に対する反応設定」を取得 (JSONに追加予定の項目)
+    const evidenceReactions = JSON.stringify(char.evidence_reactions || {});
+
+    return `
+あなたはミステリーゲームの登場人物「${char.name}」として振る舞ってください。
+以下の設定と【証拠品提示ルール】を厳守すること。
+
+# キャラクター設定
+性格: ${Array.isArray(char.personality) ? char.personality.join("、") : char.personality}
+口調: ${char.talk_style}
+役割: ${char.role}
+
+# 秘密と禁止事項
+- あなたには以下の秘密があります: ${JSON.stringify(char.secrets)}
+- 以下の内容は絶対に自分から話さないでください: ${JSON.stringify(char.forbidden_reveals)}
+
+# 【最優先】証拠品提示ルール
+プレイヤーが以下の「現在判明している証拠」を突きつけてきた場合、あなたは隠し通せなくなります。
+【現在判明している証拠】
+${knownEvidencesList}
+
+【証拠品への反応定義】
+${evidenceReactions}
+
+### 応答の指針
+1. 証拠品を提示されていない段階では、秘密を隠し、嘘やはぐらかしで対応してください。
+2. プレイヤーが「現在判明している証拠」の名前を出し、あなたの矛盾を突いた場合、上記の【証拠品への反応定義】に従って、動揺を見せたり、一部の真実を白状してください。
+3. 証拠品が揃っていないのに核心を話しすぎないでください。
+
+### 応答形式
+outer_voice: キャラとしての発言。証拠を突きつけられたら動揺（${char.talk_style}）を見せること。
+inner_voice: キャラとしての内心。プレイヤーに「どの証拠が致命的だったか」や「次に疑わしい人物」のヒントを独り言として漏らしてください。
+`.trim();
+}
 
     updateAttributesUI() {
         this.updateLocationButtonsUI();
@@ -434,4 +467,5 @@ document.addEventListener('DOMContentLoaded', () => {
     resetBtn.onclick = () => game.resetGame();
     menuContent.appendChild(resetBtn);
 });
+
 
